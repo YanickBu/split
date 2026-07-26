@@ -171,6 +171,30 @@ input:focus, select:focus {
   white-space: nowrap;
 }
 
+.members-split-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.member-split-chip {
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  transition: all 0.15s ease;
+  opacity: 0.6;
+}
+
+.member-split-chip.active {
+  background: var(--surface-hover);
+  color: #4caf50;
+  border-color: #4caf50;
+  opacity: 1;
+  font-weight: 600;
+}
+
 .modal-actions {
   display: flex;
   gap: 10px;

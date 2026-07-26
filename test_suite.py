@@ -78,9 +78,16 @@ class SettlementEngine:
                     balances[payer] = 0.0
                 balances[payer] += converted_amt
 
-                split_members = members if len(members) > 0 else [payer]
-                num_members = len(split_members)
+                split_members = evt['data'].get('splitMembers')
+                if not split_members or not isinstance(split_members, list) or len(split_members) == 0:
+                    split_members = members if len(members) > 0 else [payer]
+                else:
+                    split_members = [m for m in split_members if m in members]
 
+                if len(split_members) == 0:
+                    split_members = members if len(members) > 0 else [payer]
+
+                num_members = len(split_members)
                 base_share_cents = int((converted_amt * 100) // num_members)
                 remainder_cents = int(round((converted_amt * 100) - (base_share_cents * num_members)))
 
@@ -281,6 +288,42 @@ def run_tests():
     print(f"  Balances: {b5}")
     print(f"  Sum of all balances = {sum_b5}")
     print("  ✓ PASS: Floating point precision verified; net total balance equals 0.00.")
+
+    # -------------------------------------------------------------
+    # TEST 6: Subgroup Split Calculation
+    # -------------------------------------------------------------
+    print("\n[TEST 6] Subgroup Split Calculation (Selected Members Only)")
+    g6 = {
+        'id': 'grp_test6',
+        'currency': 'USD',
+        'members': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+        'events': []
+    }
+    # Alice pays $90 USD for Taxi, shared ONLY by Alice, Bob, Charlie (David & Eve excluded)
+    ts6 = 1700000600
+    src6 = 'dev_test6'
+    h6 = CryptographicLedger.compute_hash(g6['id'], 'ADD_EXPENSE', ts6, {
+        'title': 'Taxi to Beach', 'originalAmount': 90.0, 'originalCurrency': 'USD', 'payer': 'Alice',
+        'splitMembers': ['Alice', 'Bob', 'Charlie']
+    }, '', src6)
+    g6['events'].append({
+        'id': h6, 'hash': h6, 'type': 'ADD_EXPENSE', 'ts': ts6, 'source': src6,
+        'data': {'title': 'Taxi to Beach', 'originalAmount': 90.0, 'originalCurrency': 'USD', 'payer': 'Alice', 'splitMembers': ['Alice', 'Bob', 'Charlie']}
+    })
+
+    b6 = SettlementEngine.calculate_balances(g6, rates)
+    s6 = SettlementEngine.calculate_settlements(b6)
+    sum_b6 = round(sum(b6.values()), 2)
+
+    print(f"  Balances: {b6}")
+    print(f"  Settlements: {s6}")
+    assert b6['Alice'] == 60.0, f"Expected Alice = 60.0, got {b6['Alice']}"
+    assert b6['Bob'] == -30.0, f"Expected Bob = -30.0, got {b6['Bob']}"
+    assert b6['Charlie'] == -30.0, f"Expected Charlie = -30.0, got {b6['Charlie']}"
+    assert b6['David'] == 0.0, f"Expected David = 0.0, got {b6['David']}"
+    assert b6['Eve'] == 0.0, f"Expected Eve = 0.0, got {b6['Eve']}"
+    assert sum_b6 == 0.0, f"Sum of balances MUST equal 0.00, got {sum_b6}"
+    print("  ✓ PASS: Subgroup split verified accurately (David & Eve zero balance).")
 
     print("\n" + "=" * 70)
     print("      ALL MATHEMATICAL & IMMUTABILITY TESTS PASSED!      ")

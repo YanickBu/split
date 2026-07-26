@@ -28,14 +28,20 @@ const Settlement = {
         if (balances[payer] === undefined) balances[payer] = 0;
         balances[payer] += amount;
         
-        // Split equally among active members with penny remainder balancing
-        const activeMembers = group.members.length > 0 ? group.members : [payer];
-        const numMembers = activeMembers.length;
-        
+        // Split among designated subgroup members (or all active members if unspecified)
+        let splitMembers = (evt.data.splitMembers && Array.isArray(evt.data.splitMembers) && evt.data.splitMembers.length > 0)
+          ? evt.data.splitMembers.filter(m => group.members.includes(m))
+          : (group.members.length > 0 ? group.members : [payer]);
+
+        if (splitMembers.length === 0) {
+          splitMembers = group.members.length > 0 ? group.members : [payer];
+        }
+
+        const numMembers = splitMembers.length;
         const baseShareCents = Math.floor((amount * 100) / numMembers);
         let remainderCents = Math.round((amount * 100) - (baseShareCents * numMembers));
 
-        activeMembers.forEach((m, idx) => {
+        splitMembers.forEach((m) => {
           if (balances[m] === undefined) balances[m] = 0;
           let memberShareCents = baseShareCents;
           if (remainderCents > 0) {

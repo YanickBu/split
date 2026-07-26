@@ -98,6 +98,11 @@ const Components = {
               const strikethroughClass = isStorno ? 'strikethrough' : '';
               const emoji = this.getCategoryEmoji(e.data.title);
               
+              // Subgroup split details
+              const splitMembers = (e.data.splitMembers && Array.isArray(e.data.splitMembers)) ? e.data.splitMembers : group.members;
+              const isSubgroup = splitMembers.length < group.members.length;
+              const subgroupText = isSubgroup ? ` • For ${splitMembers.join(', ')}` : '';
+
               return `
               <div class="expense-item ${isStorno ? 'storno' : ''}">
                 <div class="expense-info">
@@ -105,7 +110,7 @@ const Components = {
                     <span>${emoji} ${e.data.title}</span>
                     ${isPendingDelta ? `<span class="sync-badge pending">⏳ Pending</span>` : ''}
                   </h4>
-                  <div class="expense-meta ${strikethroughClass}">${e.data.payer} • ${new Date(e.ts).toLocaleDateString()}</div>
+                  <div class="expense-meta ${strikethroughClass}">${e.data.payer}${subgroupText} • ${new Date(e.ts).toLocaleDateString()}</div>
                 </div>
                 <div class="expense-right">
                   <div class="expense-amounts ${strikethroughClass}">

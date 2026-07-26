@@ -248,6 +248,15 @@ const App = {
       const amount = parseFloat(amountStr.replace(/,/g, '.'));
       const currency = document.getElementById('expenseCurrency').value;
       const payer = document.getElementById('expensePayer').value;
+
+      // Subgroup member selection
+      const activeMemberChips = document.querySelectorAll('#expenseSplitMembers .member-split-chip.active');
+      let splitMembers = Array.from(activeMemberChips).map(c => c.getAttribute('data-member'));
+      
+      const group = State.getGroup(this.currentGroupId);
+      if (splitMembers.length === 0) {
+        splitMembers = group.members;
+      }
       
       if (isNaN(amount) || amount <= 0) {
         alert("Please enter a valid positive amount");
@@ -270,7 +279,6 @@ const App = {
         } catch (err) {}
       }
       
-      const group = State.getGroup(this.currentGroupId);
       const conv = Currency.convertWithStatus(amount, currency, group.currency);
       
       const evt = State.appendEvent(this.currentGroupId, 'ADD_EXPENSE', {
@@ -280,6 +288,7 @@ const App = {
         groupAmount: conv.amount,
         isPendingRate: conv.isPending,
         payer,
+        splitMembers,
         rateSnapshot: Currency.rates
       });
 
@@ -363,6 +372,31 @@ const App = {
     selPayer.innerHTML = group.members.map(m => 
       `<option value="${m}" ${m === defaultPayer ? 'selected' : ''}>${m}</option>`
     ).join('');
+
+    // Render Subgroup member split toggle chips
+    const splitContainer = document.getElementById('expenseSplitMembers');
+    if (splitContainer) {
+      splitContainer.innerHTML = group.members.map(m => 
+        `<button type="button" class="chip member-split-chip active" data-member="${m}">✓ ${m}</button>`
+      ).join('');
+
+      splitContainer.querySelectorAll('.member-split-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const isActive = chip.classList.contains('active');
+          const activeChips = splitContainer.querySelectorAll('.member-split-chip.active');
+          // Keep at least 1 member selected
+          if (isActive && activeChips.length <= 1) return;
+          
+          if (isActive) {
+            chip.classList.remove('active');
+            chip.innerText = `${chip.getAttribute('data-member')}`;
+          } else {
+            chip.classList.add('active');
+            chip.innerText = `✓ ${chip.getAttribute('data-member')}`;
+          }
+        });
+      });
+    }
     
     document.getElementById('addExpenseModal').showModal();
   },
@@ -456,7 +490,7 @@ const App = {
       return;
     }
 
-    const headers = ["ID", "Date", "Title", "Payer", "Original Amount", "Original Currency", "Group Amount", "Group Currency", "Status"];
+    const headers = ["ID", "Date", "Title", "Payer", "Split Members", "Original Amount", "Original Currency", "Group Amount", "Group Currency", "Status"];
     
     const rows = expenses.map(evt => {
       const evtId = evt.hash || evt.id;
@@ -467,12 +501,14 @@ const App = {
       const dateStr = new Date(evt.ts).toISOString().split('T')[0];
       const titleEsc = `"${(evt.data.title || '').replace(/"/g, '""')}"`;
       const payerEsc = `"${(evt.data.payer || '').replace(/"/g, '""')}"`;
+      const splitStr = `"${(evt.data.splitMembers || group.members).join(', ').replace(/"/g, '""')}"`;
       
       return [
         evtId,
         dateStr,
         titleEsc,
         payerEsc,
+        splitStr,
         evt.data.originalAmount || 0,
         evt.data.originalCurrency || group.currency,
         evt.data.groupAmount || 0,

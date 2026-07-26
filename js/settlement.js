@@ -21,21 +21,35 @@ const Settlement = {
         }
 
         const payer = evt.data.payer;
-        const amount = parseFloat(evt.data.groupAmount) || 0;
+        const amount = roundToTwoDecimals(parseFloat(evt.data.groupAmount) || 0);
         
         if (amount <= 0 || !payer) return;
 
         if (balances[payer] === undefined) balances[payer] = 0;
         balances[payer] += amount;
         
-        // Split equally among all current active group members
+        // Split equally among active members with penny remainder balancing
         const activeMembers = group.members.length > 0 ? group.members : [payer];
-        const splitAmount = amount / activeMembers.length;
-        activeMembers.forEach(m => {
+        const numMembers = activeMembers.length;
+        
+        const baseShareCents = Math.floor((amount * 100) / numMembers);
+        let remainderCents = Math.round((amount * 100) - (baseShareCents * numMembers));
+
+        activeMembers.forEach((m, idx) => {
           if (balances[m] === undefined) balances[m] = 0;
-          balances[m] -= splitAmount;
+          let memberShareCents = baseShareCents;
+          if (remainderCents > 0) {
+            memberShareCents += 1;
+            remainderCents -= 1;
+          }
+          balances[m] -= (memberShareCents / 100);
         });
       }
+    });
+
+    // Ensure all final balances are rounded cleanly to 2 decimal places
+    Object.keys(balances).forEach(m => {
+      balances[m] = roundToTwoDecimals(balances[m]);
     });
 
     return balances;
@@ -75,8 +89,8 @@ const Settlement = {
         });
       }
 
-      debtor.amount -= amount;
-      creditor.amount -= amount;
+      debtor.amount = roundToTwoDecimals(debtor.amount - amount);
+      creditor.amount = roundToTwoDecimals(creditor.amount - amount);
 
       if (debtor.amount < 0.005) i++;
       if (creditor.amount < 0.005) j++;

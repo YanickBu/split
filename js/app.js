@@ -22,7 +22,7 @@ const App = {
   },
 
   async syncOnline() {
-    const fetched = await Currency.fetchRates();
+    await Currency.fetchRates();
     let updatedPending = false;
 
     // Resolve any offline pending exchange rates across all groups
@@ -40,23 +40,89 @@ const App = {
       });
     });
 
+    // Upload & replay unsynced events across all groups
+    for (const group of Object.values(State.data.groups)) {
+      const unsynced = State.getUnsyncedEvents(group.id);
+      if (unsynced.length > 0) {
+        for (const evt of unsynced) {
+          const pubOk = await EventSourcing.publish(group.id, evt);
+          if (pubOk) {
+            State.markEventSynced(group.id, evt.hash || evt.id);
+            updatedPending = true;
+          }
+        }
+        await JSONBin.sync(group);
+      }
+    }
+
     if (updatedPending) {
       State.save();
     }
 
-    // Replay unsynced events to cloud PubSub & Storage
-    Object.values(State.data.groups).forEach(group => {
-      const unsynced = State.getUnsyncedEvents(group.id);
-      if (unsynced.length > 0) {
-        unsynced.forEach(evt => {
-          EventSourcing.publish(group.id, evt);
-          State.markEventSynced(group.id, evt.hash || evt.id);
-        });
-        JSONBin.sync(group);
-      }
-    });
-
     this.render();
+  },
+
+  async publishAndSync(groupId, evt) {
+    if (!groupId || !evt) return;
+    const group = State.getGroup(groupId);
+    
+    // Attempt publish to real-time pubsub stream
+    const pubOk = await EventSourcing.publish(groupId, evt);
+    
+    // Attempt sync to cloud storage
+    const binOk = await JSONBin.sync(group);
+
+    // If successfully delivered to cloud, mark event as synced
+    if (pubOk || binOk) {
+      State.markEventSynced(groupId, evt.hash || evt.id);
+    }
+  },
+
+  async syncGroupFromCloud(groupId) {
+    if (!groupId) return;
+    try {
+      const history = await JSONBin.fetchGroupHistory(groupId);
+      if (history && history.length > 0) {
+        let group = State.getGroup(groupId);
+        let addedNew = false;
+
+        if (!group) {
+          const initEvt = history.find(e => e.type === 'INIT');
+          if (initEvt && initEvt.data) {
+            State.data.groups[groupId] = {
+              id: groupId,
+              name: initEvt.data.name || 'Shared Group',
+              currency: initEvt.data.currency || 'USD',
+              members: [initEvt.data.creator || 'Member'],
+              events: []
+            };
+            group = State.getGroup(groupId);
+          }
+        }
+
+        if (group) {
+          history.forEach(remoteEvt => {
+            const hashKey = remoteEvt.hash || remoteEvt.id;
+            const exists = group.events.some(e => (e.hash === hashKey || e.id === hashKey));
+            if (!exists && remoteEvt.type) {
+              remoteEvt.synced = true;
+              group.events.push(remoteEvt);
+              addedNew = true;
+            }
+          });
+
+          if (addedNew) {
+            State.rehydrate(groupId);
+            State.save();
+            if (this.currentGroupId === groupId) {
+              this.render();
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[App] Could not invalidate/sync cloud history for ${groupId}:`, err);
+    }
   },
 
   handleLiveEvent(evt) {
@@ -99,7 +165,7 @@ const App = {
   
   setupListeners() {
     // New Group Form
-    document.getElementById('newGroupForm').addEventListener('submit', (e) => {
+    document.getElementById('newGroupForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('groupName').value;
       const currency = document.getElementById('groupCurrency').value;
@@ -108,8 +174,7 @@ const App = {
       const id = State.createGroup(name, currency, creator);
       const group = State.getGroup(id);
       
-      EventSourcing.publish(id, group.events[0]);
-      JSONBin.sync(group);
+      await this.publishAndSync(id, group.events[0]);
 
       document.getElementById('newGroupModal').close();
       e.target.reset();
@@ -117,13 +182,12 @@ const App = {
     });
     
     // Add Member Form
-    document.getElementById('addMemberForm').addEventListener('submit', (e) => {
+    document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('memberName').value;
       if (this.currentGroupId && name) {
         const evt = State.appendEvent(this.currentGroupId, 'ADD_MEMBER', { name });
-        EventSourcing.publish(this.currentGroupId, evt);
-        JSONBin.sync(State.getGroup(this.currentGroupId));
+        await this.publishAndSync(this.currentGroupId, evt);
       }
       document.getElementById('addMemberModal').close();
       e.target.reset();
@@ -131,7 +195,7 @@ const App = {
     });
     
     // Add Expense Form
-    document.getElementById('addExpenseForm').addEventListener('submit', (e) => {
+    document.getElementById('addExpenseForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!this.currentGroupId) return;
       
@@ -168,8 +232,7 @@ const App = {
         rateSnapshot: Currency.rates
       });
       
-      EventSourcing.publish(this.currentGroupId, evt);
-      JSONBin.sync(group);
+      await this.publishAndSync(this.currentGroupId, evt);
       
       document.getElementById('addExpenseModal').close();
       e.target.reset();
@@ -208,7 +271,7 @@ const App = {
     document.getElementById('addMemberModal').showModal();
   },
   
-  removeMember(name) {
+  async removeMember(name) {
     const group = State.getGroup(this.currentGroupId);
     if (group && group.members.length <= 1) {
       alert("Groups must have at least 1 member.");
@@ -217,8 +280,7 @@ const App = {
 
     if (confirm(`Remove ${name}?`)) {
       const evt = State.appendEvent(this.currentGroupId, 'REMOVE_MEMBER', { name });
-      EventSourcing.publish(this.currentGroupId, evt);
-      JSONBin.sync(State.getGroup(this.currentGroupId));
+      await this.publishAndSync(this.currentGroupId, evt);
       this.render();
     }
   },
@@ -241,27 +303,26 @@ const App = {
     document.getElementById('addExpenseModal').showModal();
   },
   
-  stornoExpense(expenseId) {
+  async stornoExpense(expenseId) {
     if (confirm("Void this expense?")) {
       const evt = State.appendEvent(this.currentGroupId, 'STORNO_EXPENSE', { expenseId });
-      EventSourcing.publish(this.currentGroupId, evt);
-      JSONBin.sync(State.getGroup(this.currentGroupId));
+      await this.publishAndSync(this.currentGroupId, evt);
       this.render();
     }
   },
   
-  settleUp() {
+  async settleUp() {
     if (confirm("Mark all debts as settled?")) {
       const evt = State.appendEvent(this.currentGroupId, 'SETTLE_UP', { ts: Date.now() });
-      EventSourcing.publish(this.currentGroupId, evt);
+      await this.publishAndSync(this.currentGroupId, evt);
+
       const group = State.getGroup(this.currentGroupId);
-      group.events.forEach(e => {
+      for (const e of group.events) {
         if (e.type === 'ADD_EXPENSE') {
           const stornoEvt = State.appendEvent(this.currentGroupId, 'STORNO_EXPENSE', { expenseId: e.id });
-          EventSourcing.publish(this.currentGroupId, stornoEvt);
+          await this.publishAndSync(this.currentGroupId, stornoEvt);
         }
-      });
-      JSONBin.sync(group);
+      }
       this.render();
       alert("All squared up!");
     }
@@ -308,28 +369,12 @@ const App = {
       this.currentGroupId = hash.split('=')[1];
       let group = State.getGroup(this.currentGroupId);
       
-      // If group doesn't exist locally (e.g. opened shared link on new device), fetch from cloud
-      if (!group) {
-        const history = await JSONBin.fetchGroupHistory(this.currentGroupId);
-        if (history && history.length > 0) {
-          const initEvt = history.find(e => e.type === 'INIT');
-          if (initEvt && initEvt.data) {
-            State.data.groups[this.currentGroupId] = {
-              id: this.currentGroupId,
-              name: initEvt.data.name || 'Shared Group',
-              currency: initEvt.data.currency || 'USD',
-              members: [initEvt.data.creator || 'Member'],
-              events: history
-            };
-            State.rehydrate(this.currentGroupId);
-            State.save();
-            group = State.getGroup(this.currentGroupId);
-          }
-        }
-      }
+      // Always trigger asynchronous cloud history sync to invalidate/update localStorage with new cloud entries
+      this.syncGroupFromCloud(this.currentGroupId);
 
       if (!group) {
-        this.goHome();
+        // Render loading placeholder while initial cloud fetch occurs
+        appEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-dim);">Connecting to group cloud ledger...</div>`;
         return;
       }
 

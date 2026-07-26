@@ -29,7 +29,7 @@ const Components = {
       
     // Find stornoed
     const stornoIds = new Set(
-      group.events.filter(e => e.type === 'STORNO_EXPENSE').map(e => e.data.expenseId)
+      group.events.filter(e => e.type === 'STORNO_EXPENSE').map(e => e.data && e.data.expenseId)
     );
     
     let html = `
@@ -66,15 +66,20 @@ const Components = {
         ${expenses.length === 0 ? '<div class="empty-state" style="padding:10px">No expenses yet.</div>' : `
           <div class="expenses-list">
             ${expenses.map(e => {
-              const isStorno = stornoIds.has(e.id);
+              const evtId = e.hash || e.id;
+              const isStorno = stornoIds.has(e.id) || stornoIds.has(e.hash) || stornoIds.has(evtId);
               const origAmount = Currency.format(e.data.originalAmount, e.data.originalCurrency);
               const isDiffCurrency = e.data.originalCurrency !== group.currency;
               const isPendingRate = e.data.isPendingRate;
+              const isUnsynced = e.synced === false;
               
               return `
               <div class="expense-item ${isStorno ? 'storno' : ''}">
                 <div class="expense-info">
-                  <h4 class="${isStorno ? 'strikethrough' : ''}">${e.data.title}</h4>
+                  <h4 class="${isStorno ? 'strikethrough' : ''}">
+                    ${e.data.title}
+                    ${isUnsynced ? `<span class="pending-sync-badge">☁️ Unsynced</span>` : ''}
+                  </h4>
                   <div class="expense-meta">${e.data.payer} • ${new Date(e.ts).toLocaleDateString()}</div>
                 </div>
                 <div class="expense-right">
@@ -87,7 +92,7 @@ const Components = {
                     `}
                   </div>
                   ${!isStorno ? `
-                    <button class="expense-void-btn" title="Void expense" onclick="App.stornoExpense('${e.id}')">✕</button>
+                    <button class="expense-void-btn" title="Void expense" onclick="App.stornoExpense('${evtId}')">✕</button>
                   ` : ''}
                 </div>
               </div>

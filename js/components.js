@@ -6,15 +6,20 @@ const Components = {
     }
     
     return `<div class="group-list">
-      ${list.map(g => `
+      ${list.map(g => {
+        const pendingCount = (g.pendingDeltas || []).length;
+        return `
         <div class="card clickable group-item" onclick="App.openGroup('${g.id}')">
           <div class="group-info">
-            <h3>${g.name}</h3>
+            <h3>
+              ${g.name}
+              ${pendingCount > 0 ? `<span class="pending-delta-badge">⚡ ${pendingCount} local delta</span>` : ''}
+            </h3>
             <p>${g.members.length} members • ${g.currency}</p>
           </div>
           <div class="group-arrow">→</div>
         </div>
-      `).join('')}
+      `;}).join('')}
     </div>`;
   },
 
@@ -32,7 +37,16 @@ const Components = {
       group.events.filter(e => e.type === 'STORNO_EXPENSE').map(e => e.data && e.data.expenseId)
     );
     
+    const pendingDeltas = group.pendingDeltas || [];
+    const pendingCount = pendingDeltas.length;
+
     let html = `
+      <div class="sync-status-bar ${pendingCount > 0 ? 'pending' : 'synced'}">
+        ${pendingCount > 0 
+          ? `⚡ ${pendingCount} local delta(s) pending cloud confirmation...` 
+          : `✓ Ledger fully synced with cloud`}
+      </div>
+
       <div class="card">
         <div class="section-title">Members</div>
         <div class="members-list">
@@ -71,14 +85,14 @@ const Components = {
               const origAmount = Currency.format(e.data.originalAmount, e.data.originalCurrency);
               const isDiffCurrency = e.data.originalCurrency !== group.currency;
               const isPendingRate = e.data.isPendingRate;
-              const isUnsynced = e.synced === false;
+              const isPendingDelta = pendingDeltas.includes(evtId);
               
               return `
               <div class="expense-item ${isStorno ? 'storno' : ''}">
                 <div class="expense-info">
                   <h4 class="${isStorno ? 'strikethrough' : ''}">
                     ${e.data.title}
-                    ${isUnsynced ? `<span class="pending-sync-badge">☁️ Unsynced</span>` : ''}
+                    ${isPendingDelta ? `<span class="pending-delta-badge">☁️ Local Delta (Pending Cloud)</span>` : ''}
                   </h4>
                   <div class="expense-meta">${e.data.payer} • ${new Date(e.ts).toLocaleDateString()}</div>
                 </div>

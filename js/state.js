@@ -27,7 +27,6 @@ const State = {
     if (d) {
       try {
         this.data.groups = JSON.parse(d);
-        // Ensure all loaded groups have events sorted deterministically
         Object.keys(this.data.groups).forEach(id => this.rehydrate(id));
       } catch (e) {
         this.data.groups = {};
@@ -46,13 +45,14 @@ const State = {
       name,
       currency,
       members: [creatorName],
-      events: []
+      events: [],
+      pendingDeltas: []
     };
     
     const ts = Date.now();
     const hash = this.generateEventHash(id, 'INIT', ts, { name, currency, creator: creatorName }, '');
     
-    group.events.push({
+    const initEvt = {
       id: hash,
       hash: hash,
       prevHash: '',
@@ -60,7 +60,10 @@ const State = {
       ts: ts,
       data: { name, currency, creator: creatorName },
       synced: false
-    });
+    };
+
+    group.events.push(initEvt);
+    group.pendingDeltas.push(hash);
 
     this.data.groups[id] = group;
     this.save();
@@ -68,7 +71,9 @@ const State = {
   },
 
   getGroup(id) {
-    return this.data.groups[id];
+    const g = this.data.groups[id];
+    if (g && !g.pendingDeltas) g.pendingDeltas = [];
+    return g;
   },
 
   deleteGroup(id) {
@@ -77,7 +82,7 @@ const State = {
   },
 
   appendEvent(groupId, eventType, eventData) {
-    const group = this.data.groups[groupId];
+    const group = this.getGroup(groupId);
     if (!group) return null;
     
     const ts = Date.now();
@@ -85,11 +90,10 @@ const State = {
     const hash = this.generateEventHash(groupId, eventType, ts, eventData, prevHash);
 
     // Prevent duplicate event insertion
-    if (group.events.some(e => e.hash === hash || e.id === hash)) {
-      return group.events.find(e => e.hash === hash || e.id === hash);
-    }
+    let evt = group.events.find(e => e.hash === hash || e.id === hash);
+    if (evt) return evt;
 
-    const evt = {
+    evt = {
       id: hash,
       hash: hash,
       prevHash: prevHash,
@@ -100,6 +104,10 @@ const State = {
     };
     
     group.events.push(evt);
+    if (!group.pendingDeltas.includes(hash)) {
+      group.pendingDeltas.push(hash);
+    }
+
     this.processEvent(group, evt);
     this.save();
     return evt;
@@ -117,32 +125,34 @@ const State = {
     }
   },
 
-  markEventSynced(groupId, eventHash) {
-    const group = this.data.groups[groupId];
+  resolvePendingDelta(groupId, eventHash) {
+    const group = this.getGroup(groupId);
     if (!group) return;
+    if (group.pendingDeltas) {
+      group.pendingDeltas = group.pendingDeltas.filter(h => h !== eventHash);
+    }
     const evt = group.events.find(e => (e.hash === eventHash || e.id === eventHash));
     if (evt) {
       evt.synced = true;
-      this.save();
     }
+    this.save();
   },
 
-  getUnsyncedEvents(groupId) {
-    const group = this.data.groups[groupId];
-    if (!group) return [];
-    return group.events.filter(e => !e.synced);
+  isEventPendingDelta(groupId, eventHash) {
+    const group = this.getGroup(groupId);
+    if (!group || !group.pendingDeltas) return false;
+    return group.pendingDeltas.includes(eventHash);
   },
 
   rehydrate(groupId) {
     const group = this.data.groups[groupId];
     if (!group) return;
     
+    if (!group.pendingDeltas) group.pendingDeltas = [];
     group.members = [];
     
-    // Sort events deterministically by timestamp ascending
     group.events.sort((a, b) => a.ts - b.ts);
 
-    // Deduplicate events by hash/id
     const seenHashes = new Set();
     const cleanEvents = [];
     

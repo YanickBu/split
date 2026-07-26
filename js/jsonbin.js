@@ -7,7 +7,6 @@ const JSONBin = {
     const cloudId = `${this.PREFIX}${group.id}`;
 
     try {
-      // 1. Primary Sync: Publish latest state snapshot to ntfy cloud topic history
       const payload = {
         type: 'SNAPSHOT_SYNC',
         groupId: group.id,
@@ -21,7 +20,6 @@ const JSONBin = {
         body: JSON.stringify(payload)
       });
 
-      // 2. If a custom JSONBin.io key is configured, also sync to jsonbin.io
       if (this.apiKey) {
         await fetch(`https://api.jsonbin.io/v3/b`, {
           method: 'POST',
@@ -45,7 +43,8 @@ const JSONBin = {
     if (!groupId) return [];
     const cloudId = `${this.PREFIX}${groupId}`;
     try {
-      const res = await fetch(`https://ntfy.sh/${cloudId}/json?poll=1`);
+      // Query with since=all to retrieve complete cloud topic history
+      const res = await fetch(`https://ntfy.sh/${cloudId}/json?poll=1&since=all`);
       if (!res.ok) return [];
       
       const text = await res.text();
@@ -53,6 +52,7 @@ const JSONBin = {
       const events = [];
 
       lines.forEach(line => {
+        if (!line.trim()) return;
         try {
           const item = JSON.parse(line);
           if (item && item.message) {

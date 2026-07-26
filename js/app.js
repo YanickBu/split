@@ -16,7 +16,7 @@ const App = {
 
   setupOnlineSync() {
     window.addEventListener('online', () => {
-      console.log("[App] Device back online! Replaying queued messages and resolving exchange rates...");
+      console.log("[App] Device back online! Replaying queued local deltas and resolving exchange rates...");
       this.syncOnline();
     });
   },
@@ -40,15 +40,18 @@ const App = {
       });
     });
 
-    // Upload & replay unsynced events across all groups
+    // Upload & replay unsynced local deltas across all groups
     for (const group of Object.values(State.data.groups)) {
-      const unsynced = State.getUnsyncedEvents(group.id);
-      if (unsynced.length > 0) {
-        for (const evt of unsynced) {
-          const pubOk = await EventSourcing.publish(group.id, evt);
-          if (pubOk) {
-            State.markEventSynced(group.id, evt.hash || evt.id);
-            updatedPending = true;
+      const pendingDeltas = group.pendingDeltas || [];
+      if (pendingDeltas.length > 0) {
+        for (const evtHash of [...pendingDeltas]) {
+          const evt = group.events.find(e => (e.hash === evtHash || e.id === evtHash));
+          if (evt) {
+            const pubOk = await EventSourcing.publish(group.id, evt);
+            if (pubOk) {
+              State.resolvePendingDelta(group.id, evtHash);
+              updatedPending = true;
+            }
           }
         }
         await JSONBin.sync(group);
@@ -72,13 +75,8 @@ const App = {
     // Attempt sync to cloud storage
     const binOk = await JSONBin.sync(group);
 
-    // If successfully delivered to cloud, mark event as synced and update UI
-    if (pubOk || binOk) {
-      State.markEventSynced(groupId, evt.hash || evt.id);
-      if (this.currentGroupId === groupId) {
-        this.render();
-      }
-    }
+    // Verify receipt by reconciling against cloud history
+    await this.syncGroupFromCloud(groupId);
   },
 
   async syncGroupFromCloud(groupId) {
@@ -87,7 +85,7 @@ const App = {
       const history = await JSONBin.fetchGroupHistory(groupId);
       if (history && history.length > 0) {
         let group = State.getGroup(groupId);
-        let addedNew = false;
+        let updated = false;
 
         if (!group) {
           const initEvt = history.find(e => e.type === 'INIT');
@@ -97,7 +95,8 @@ const App = {
               name: initEvt.data.name || 'Shared Group',
               currency: initEvt.data.currency || 'USD',
               members: [initEvt.data.creator || 'Member'],
-              events: []
+              events: [],
+              pendingDeltas: []
             };
             group = State.getGroup(groupId);
           }
@@ -106,15 +105,23 @@ const App = {
         if (group) {
           history.forEach(remoteEvt => {
             const hashKey = remoteEvt.hash || remoteEvt.id;
+            
+            // 1. If cloud history contains a hash from our local pendingDeltas, resolve it!
+            if (group.pendingDeltas && group.pendingDeltas.includes(hashKey)) {
+              State.resolvePendingDelta(groupId, hashKey);
+              updated = true;
+            }
+
+            // 2. If cloud history contains a new event not in local events, merge it!
             const exists = group.events.some(e => (e.hash === hashKey || e.id === hashKey));
             if (!exists && remoteEvt.type) {
               remoteEvt.synced = true;
               group.events.push(remoteEvt);
-              addedNew = true;
+              updated = true;
             }
           });
 
-          if (addedNew) {
+          if (updated) {
             State.rehydrate(groupId);
             State.save();
             if (this.currentGroupId === groupId) {
@@ -138,6 +145,10 @@ const App = {
       let addedAny = false;
       evt.groupState.events.forEach(remoteEvt => {
         const hashKey = remoteEvt.hash || remoteEvt.id;
+        if (group.pendingDeltas && group.pendingDeltas.includes(hashKey)) {
+          State.resolvePendingDelta(this.currentGroupId, hashKey);
+          addedAny = true;
+        }
         const exists = group.events.some(e => (e.hash === hashKey || e.id === hashKey));
         if (!exists && remoteEvt.type) {
           remoteEvt.synced = true;
@@ -155,8 +166,11 @@ const App = {
 
     // Handle regular transaction event
     const evtHash = evt.hash || evt.id;
+    if (group.pendingDeltas && group.pendingDeltas.includes(evtHash)) {
+      State.resolvePendingDelta(this.currentGroupId, evtHash);
+    }
+
     const existing = group.events.find(e => (e.hash === evtHash || e.id === evtHash));
-    
     if (!existing && evt.type) {
       evt.synced = true;
       group.events.push(evt);

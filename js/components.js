@@ -13,7 +13,7 @@ const Components = {
           <div class="group-info">
             <h3>
               ${g.name}
-              ${pendingCount > 0 ? `<span class="sync-badge pending">☁️ Offline</span>` : ''}
+              ${pendingCount > 0 ? `<span class="sync-badge pending">⏳ Pending</span>` : ''}
             </h3>
             <p>${g.members.length} members • ${g.currency}</p>
           </div>
@@ -70,7 +70,7 @@ const Components = {
       
       <div class="card">
         <div class="section-title">Expenses</div>
-        ${expenses.length === 0 ? '<div class="empty-state" style="padding:10px">No expenses yet.</div>' : `
+        ${expenses.length === 0 ? '<div class="empty-state" style="padding:10px">No expenses yet. Tap 💰 to add one!</div>' : `
           <div class="expenses-list">
             ${expenses.map(e => {
               const evtId = e.hash || e.id;
@@ -85,7 +85,7 @@ const Components = {
                 <div class="expense-info">
                   <h4 class="${isStorno ? 'strikethrough' : ''}">
                     ${e.data.title}
-                    ${isPendingDelta ? `<span class="sync-badge pending">☁️ Offline</span>` : ''}
+                    ${isPendingDelta ? `<span class="sync-badge pending">⏳ Pending</span>` : ''}
                   </h4>
                   <div class="expense-meta">${e.data.payer} • ${new Date(e.ts).toLocaleDateString()}</div>
                 </div>

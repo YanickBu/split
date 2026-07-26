@@ -108,6 +108,10 @@ const Components = {
           </div>
         `}
       </div>
+
+      <footer class="app-footer">
+        <a href="#" class="subtle-link" onclick="App.exportCSV(event)">csv</a>
+      </footer>
     `;
     
     return html;

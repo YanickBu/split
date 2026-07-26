@@ -395,3 +395,22 @@ input:focus, select:focus {
   font-weight: 500;
   vertical-align: middle;
 }
+
+.app-footer {
+  text-align: center;
+  padding: 12px 0 24px 0;
+  margin-top: 4px;
+}
+.subtle-link {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.subtle-link:hover {
+  color: var(--text);
+  opacity: 1;
+  text-decoration: underline;
+}

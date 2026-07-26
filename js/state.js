@@ -1,15 +1,25 @@
 const State = {
   KEYS: {
-    GROUPS: 'split_groups'
+    GROUPS: 'split_groups',
+    DEVICE_ID: 'split_device_id'
   },
 
   data: {
     groups: {}
   },
 
+  getDeviceId() {
+    let devId = localStorage.getItem(this.KEYS.DEVICE_ID);
+    if (!devId) {
+      devId = 'dev_' + Math.random().toString(36).substring(2, 8);
+      localStorage.setItem(this.KEYS.DEVICE_ID, devId);
+    }
+    return devId;
+  },
+
   // Deterministic Cryptographic Hash Generator for Immutable Ledger Events
-  generateEventHash(groupId, type, ts, data, prevHash = '') {
-    const payload = `${groupId}:${type}:${ts}:${JSON.stringify(data || {})}:${prevHash}`;
+  generateEventHash(groupId, type, ts, data, prevHash = '', source = '') {
+    const payload = `${groupId}:${type}:${ts}:${source}:${JSON.stringify(data || {})}:${prevHash}`;
     let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
     for (let i = 0; i < payload.length; i++) {
       const ch = payload.charCodeAt(i);
@@ -50,7 +60,8 @@ const State = {
     };
     
     const ts = Date.now();
-    const hash = this.generateEventHash(id, 'INIT', ts, { name, currency, creator: creatorName }, '');
+    const source = this.getDeviceId();
+    const hash = this.generateEventHash(id, 'INIT', ts, { name, currency, creator: creatorName }, '', source);
     
     const initEvt = {
       id: hash,
@@ -58,6 +69,7 @@ const State = {
       prevHash: '',
       type: 'INIT',
       ts: ts,
+      source: source,
       data: { name, currency, creator: creatorName },
       synced: false
     };
@@ -86,8 +98,9 @@ const State = {
     if (!group) return null;
     
     const ts = Date.now();
+    const source = this.getDeviceId();
     const prevHash = group.events.length > 0 ? (group.events[group.events.length - 1].hash || '') : '';
-    const hash = this.generateEventHash(groupId, eventType, ts, eventData, prevHash);
+    const hash = this.generateEventHash(groupId, eventType, ts, eventData, prevHash, source);
 
     // Prevent duplicate event insertion
     let evt = group.events.find(e => e.hash === hash || e.id === hash);
@@ -99,6 +112,7 @@ const State = {
       prevHash: prevHash,
       type: eventType,
       ts: ts,
+      source: source,
       data: eventData,
       synced: false
     };

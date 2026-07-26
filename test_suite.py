@@ -9,8 +9,8 @@ import json
 
 class CryptographicLedger:
     @staticmethod
-    def compute_hash(group_id, event_type, ts, data, prev_hash=""):
-        payload = f"{group_id}:{event_type}:{ts}:{json.dumps(data, sort_keys=True)}:{prev_hash}"
+    def compute_hash(group_id, event_type, ts, data, prev_hash="", source=""):
+        payload = f"{group_id}:{event_type}:{ts}:{source}:{json.dumps(data, sort_keys=True)}:{prev_hash}"
         # Simulating JavaScript deterministic 12-char hex hash algorithm
         h1 = 0xdeadbeef
         h2 = 0x41c6ce57
@@ -26,8 +26,9 @@ class CryptographicLedger:
     def validate_chain(events, group_id):
         prev_hash = ""
         for idx, evt in enumerate(events):
+            source = evt.get('source', '')
             expected_hash = CryptographicLedger.compute_hash(
-                group_id, evt['type'], evt['ts'], evt['data'], prev_hash
+                group_id, evt['type'], evt['ts'], evt['data'], prev_hash, source
             )
             if evt['hash'] != expected_hash:
                 return False, f"Tamper detected at step {idx}! Expected {expected_hash}, got {evt['hash']}"
@@ -117,7 +118,7 @@ class SettlementEngine:
             amount = round(min(debtor['amount'], creditor['amount']), 2)
 
             if amount > 0.005:
-                settlements.push if hasattr(settlements, 'push') else settlements.append({
+                settlements.append({
                     'from': debtor['member'],
                     'to': creditor['member'],
                     'amount': amount
@@ -151,11 +152,12 @@ def run_tests():
     }
     # Alice pays $90 USD
     ts1 = 1700000000
+    src1 = 'dev_test1'
     h1 = CryptographicLedger.compute_hash(g1['id'], 'ADD_EXPENSE', ts1, {
         'title': 'Dinner', 'originalAmount': 90.0, 'originalCurrency': 'USD', 'payer': 'Alice'
-    }, '')
+    }, '', src1)
     g1['events'].append({
-        'id': h1, 'hash': h1, 'type': 'ADD_EXPENSE', 'ts': ts1,
+        'id': h1, 'hash': h1, 'type': 'ADD_EXPENSE', 'ts': ts1, 'source': src1,
         'data': {'title': 'Dinner', 'originalAmount': 90.0, 'originalCurrency': 'USD', 'payer': 'Alice'}
     })
 
@@ -183,21 +185,23 @@ def run_tests():
     }
     # Sarah pays 15,500 JPY in Tokyo (= $100.00 USD)
     ts2_1 = 1700000100
+    src2_1 = 'dev_mobile_sarah'
     h2_1 = CryptographicLedger.compute_hash(g2['id'], 'ADD_EXPENSE', ts2_1, {
         'title': 'Sushi', 'originalAmount': 15500.0, 'originalCurrency': 'JPY', 'payer': 'Sarah'
-    }, '')
+    }, '', src2_1)
     g2['events'].append({
-        'id': h2_1, 'hash': h2_1, 'type': 'ADD_EXPENSE', 'ts': ts2_1,
+        'id': h2_1, 'hash': h2_1, 'type': 'ADD_EXPENSE', 'ts': ts2_1, 'source': src2_1,
         'data': {'title': 'Sushi', 'originalAmount': 15500.0, 'originalCurrency': 'JPY', 'payer': 'Sarah'}
     })
 
     # Alex pays 46.00 EUR in Paris (= $50.00 USD)
     ts2_2 = 1700000200
+    src2_2 = 'dev_web_alex'
     h2_2 = CryptographicLedger.compute_hash(g2['id'], 'ADD_EXPENSE', ts2_2, {
         'title': 'Museum', 'originalAmount': 46.0, 'originalCurrency': 'EUR', 'payer': 'Alex'
-    }, h2_1)
+    }, h2_1, src2_2)
     g2['events'].append({
-        'id': h2_2, 'hash': h2_2, 'type': 'ADD_EXPENSE', 'ts': ts2_2,
+        'id': h2_2, 'hash': h2_2, 'type': 'ADD_EXPENSE', 'ts': ts2_2, 'source': src2_2,
         'data': {'title': 'Museum', 'originalAmount': 46.0, 'originalCurrency': 'EUR', 'payer': 'Alex'}
     })
 
@@ -206,8 +210,6 @@ def run_tests():
 
     print(f"  Balances (USD): {b2}")
     print(f"  Settlements: {s2}")
-    # Total spent = $150. Share = $75 each.
-    # Sarah paid $100 => +$25. Alex paid $50 => -$25.
     assert b2['Sarah'] == 25.0, f"Expected Sarah = 25.0, got {b2['Sarah']}"
     assert b2['Alex'] == -25.0, f"Expected Alex = -25.0, got {b2['Alex']}"
     assert len(s2) == 1
@@ -218,13 +220,13 @@ def run_tests():
     # TEST 3: Storno Immutability Test (Void expense append-only)
     # -------------------------------------------------------------
     print("\n[TEST 3] Storno Void Expense Immutability (Append-only log)")
-    # Append STORNO_EXPENSE for Sarah's sushi expense without modifying original event
     ts3 = 1700000300
+    src3 = 'dev_mobile_sarah'
     h3 = CryptographicLedger.compute_hash(g2['id'], 'STORNO_EXPENSE', ts3, {
         'expenseId': h2_1
-    }, h2_2)
+    }, h2_2, src3)
     g2['events'].append({
-        'id': h3, 'hash': h3, 'type': 'STORNO_EXPENSE', 'ts': ts3,
+        'id': h3, 'hash': h3, 'type': 'STORNO_EXPENSE', 'ts': ts3, 'source': src3,
         'data': {'expenseId': h2_1}
     })
 
@@ -233,8 +235,6 @@ def run_tests():
 
     print(f"  Balances after Voiding Sushi: {b3}")
     print(f"  Settlements: {s3}")
-    # Only Alex's $50 museum expense remains active. Share = $25 each.
-    # Alex paid $50 => +$25. Sarah paid $0 => -$25.
     assert b3['Alex'] == 25.0, f"Expected Alex = 25.0, got {b3['Alex']}"
     assert b3['Sarah'] == -25.0, f"Expected Sarah = -25.0, got {b3['Sarah']}"
     assert s3[0]['from'] == 'Sarah' and s3[0]['to'] == 'Alex' and s3[0]['amount'] == 25.0
@@ -248,7 +248,7 @@ def run_tests():
     assert valid is True, f"Chain should be valid: {msg}"
     print("  ✓ PASS: Cryptographic event hash chain validation succeeded.")
 
-    # Attempt Tampering: Change original JPY amount in past event from 15500 to 99999
+    # Attempt Tampering: Change original JPY amount in past event
     tampered_events = [json.loads(json.dumps(e)) for e in g2['events']]
     tampered_events[0]['data']['originalAmount'] = 99999.0
 
@@ -266,12 +266,12 @@ def run_tests():
         'members': ['A', 'B', 'C'],
         'events': []
     }
-    # Expense of $100 split 3 ways = 33.333333...
+    src5 = 'dev_test5'
     h5 = CryptographicLedger.compute_hash(g5['id'], 'ADD_EXPENSE', 1700000500, {
         'title': 'Shared Item', 'originalAmount': 100.0, 'originalCurrency': 'USD', 'payer': 'A'
-    }, '')
+    }, '', src5)
     g5['events'].append({
-        'id': h5, 'hash': h5, 'type': 'ADD_EXPENSE', 'ts': 1700000500,
+        'id': h5, 'hash': h5, 'type': 'ADD_EXPENSE', 'ts': 1700000500, 'source': src5,
         'data': {'title': 'Shared Item', 'originalAmount': 100.0, 'originalCurrency': 'USD', 'payer': 'A'}
     })
 

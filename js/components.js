@@ -13,7 +13,7 @@ const Components = {
           <div class="group-info">
             <h3>
               ${g.name}
-              ${pendingCount > 0 ? `<span class="pending-delta-badge">⚡ ${pendingCount} local delta</span>` : ''}
+              ${pendingCount > 0 ? `<span class="sync-badge pending">☁️ Syncing...</span>` : ''}
             </h3>
             <p>${g.members.length} members • ${g.currency}</p>
           </div>
@@ -41,11 +41,11 @@ const Components = {
     const pendingCount = pendingDeltas.length;
 
     let html = `
-      <div class="sync-status-bar ${pendingCount > 0 ? 'pending' : 'synced'}">
-        ${pendingCount > 0 
-          ? `⚡ ${pendingCount} local delta(s) pending cloud confirmation...` 
-          : `✓ Ledger fully synced with cloud`}
-      </div>
+      ${pendingCount > 0 ? `
+        <div class="sync-status-bar pending">
+          ☁️ Syncing changes to cloud...
+        </div>
+      ` : ''}
 
       <div class="card">
         <div class="section-title">Members</div>
@@ -92,7 +92,7 @@ const Components = {
                 <div class="expense-info">
                   <h4 class="${isStorno ? 'strikethrough' : ''}">
                     ${e.data.title}
-                    ${isPendingDelta ? `<span class="pending-delta-badge">☁️ Local Delta (Pending Cloud)</span>` : ''}
+                    ${isPendingDelta ? `<span class="sync-badge pending">☁️ Syncing...</span>` : ''}
                   </h4>
                   <div class="expense-meta">${e.data.payer} • ${new Date(e.ts).toLocaleDateString()}</div>
                 </div>

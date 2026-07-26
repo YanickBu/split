@@ -291,18 +291,13 @@ input:focus, select:focus { border-color: var(--text); }
   margin-bottom: -12px;
   transition: all 0.2s ease;
 }
-.sync-status-bar.synced {
-  background: rgba(76, 175, 80, 0.08);
-  border: 1px solid rgba(76, 175, 80, 0.25);
-  color: #4caf50;
-}
 .sync-status-bar.pending {
   background: rgba(255, 152, 0, 0.1);
   border: 1px solid rgba(255, 152, 0, 0.35);
   color: #ff9800;
 }
 
-.pending-delta-badge {
+.sync-badge.pending {
   font-size: 11px;
   color: #ff9800;
   background: rgba(255, 152, 0, 0.12);

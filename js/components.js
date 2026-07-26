@@ -13,7 +13,7 @@ const Components = {
           <div class="group-info">
             <h3>
               ${g.name}
-              ${pendingCount > 0 ? `<span class="sync-badge pending">☁️ Syncing...</span>` : ''}
+              ${pendingCount > 0 ? `<span class="sync-badge pending">☁️ Offline</span>` : ''}
             </h3>
             <p>${g.members.length} members • ${g.currency}</p>
           </div>
@@ -38,15 +38,8 @@ const Components = {
     );
     
     const pendingDeltas = group.pendingDeltas || [];
-    const pendingCount = pendingDeltas.length;
 
     let html = `
-      ${pendingCount > 0 ? `
-        <div class="sync-status-bar pending">
-          ☁️ Syncing changes to cloud...
-        </div>
-      ` : ''}
-
       <div class="card">
         <div class="section-title">Members</div>
         <div class="members-list">
@@ -85,14 +78,14 @@ const Components = {
               const origAmount = Currency.format(e.data.originalAmount, e.data.originalCurrency);
               const isDiffCurrency = e.data.originalCurrency !== group.currency;
               const isPendingRate = e.data.isPendingRate;
-              const isPendingDelta = pendingDeltas.includes(evtId);
+              const isPendingDelta = pendingDeltas.includes(evtId) || pendingDeltas.includes(e.hash) || pendingDeltas.includes(e.id);
               
               return `
               <div class="expense-item ${isStorno ? 'storno' : ''}">
                 <div class="expense-info">
                   <h4 class="${isStorno ? 'strikethrough' : ''}">
                     ${e.data.title}
-                    ${isPendingDelta ? `<span class="sync-badge pending">☁️ Syncing...</span>` : ''}
+                    ${isPendingDelta ? `<span class="sync-badge pending">☁️ Offline</span>` : ''}
                   </h4>
                   <div class="expense-meta">${e.data.payer} • ${new Date(e.ts).toLocaleDateString()}</div>
                 </div>

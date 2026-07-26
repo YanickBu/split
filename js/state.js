@@ -125,23 +125,31 @@ const State = {
     }
   },
 
-  resolvePendingDelta(groupId, eventHash) {
+  resolvePendingDelta(groupId, eventIdentifier) {
     const group = this.getGroup(groupId);
     if (!group) return;
     if (group.pendingDeltas) {
-      group.pendingDeltas = group.pendingDeltas.filter(h => h !== eventHash);
+      group.pendingDeltas = group.pendingDeltas.filter(h => h !== eventIdentifier);
     }
-    const evt = group.events.find(e => (e.hash === eventHash || e.id === eventHash));
+    const evt = group.events.find(e => (e.hash === eventIdentifier || e.id === eventIdentifier));
     if (evt) {
       evt.synced = true;
     }
     this.save();
   },
 
-  isEventPendingDelta(groupId, eventHash) {
+  clearAllPendingDeltas(groupId) {
+    const group = this.getGroup(groupId);
+    if (!group) return;
+    group.pendingDeltas = [];
+    group.events.forEach(e => { e.synced = true; });
+    this.save();
+  },
+
+  isEventPendingDelta(groupId, eventIdentifier) {
     const group = this.getGroup(groupId);
     if (!group || !group.pendingDeltas) return false;
-    return group.pendingDeltas.includes(eventHash);
+    return group.pendingDeltas.includes(eventIdentifier);
   },
 
   rehydrate(groupId) {

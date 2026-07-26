@@ -51,6 +51,8 @@ const App = {
             const pubOk = await EventSourcing.publish(group.id, evt);
             if (pubOk) {
               State.resolvePendingDelta(group.id, evtHash);
+              State.resolvePendingDelta(group.id, evt.id);
+              State.resolvePendingDelta(group.id, evt.hash);
               updatedPending = true;
             }
           }
@@ -76,13 +78,17 @@ const App = {
     // Attempt sync to cloud storage
     const binOk = await JSONBin.sync(group);
 
-    // If successfully delivered to cloud, mark event as synced and update UI
+    // If successfully delivered to cloud, mark event as synced immediately
     if (pubOk || binOk) {
-      State.resolvePendingDelta(groupId, evt.hash || evt.id);
+      State.resolvePendingDelta(groupId, evt.hash);
+      State.resolvePendingDelta(groupId, evt.id);
       if (this.currentGroupId === groupId) {
         this.render();
       }
     }
+
+    // Also trigger cloud reconciliation in background
+    this.syncGroupFromCloud(groupId);
   },
 
   async syncGroupFromCloud(groupId) {
@@ -113,8 +119,10 @@ const App = {
             const hashKey = remoteEvt.hash || remoteEvt.id;
             
             // 1. If cloud history contains a hash from our local pendingDeltas, resolve it!
-            if (group.pendingDeltas && group.pendingDeltas.includes(hashKey)) {
+            if (group.pendingDeltas && (group.pendingDeltas.includes(hashKey) || group.pendingDeltas.includes(remoteEvt.id) || group.pendingDeltas.includes(remoteEvt.hash))) {
               State.resolvePendingDelta(groupId, hashKey);
+              State.resolvePendingDelta(groupId, remoteEvt.id);
+              State.resolvePendingDelta(groupId, remoteEvt.hash);
               updated = true;
             }
 
@@ -172,8 +180,10 @@ const App = {
 
     // Handle regular transaction event
     const evtHash = evt.hash || evt.id;
-    if (group.pendingDeltas && group.pendingDeltas.includes(evtHash)) {
+    if (group.pendingDeltas && (group.pendingDeltas.includes(evtHash) || group.pendingDeltas.includes(evt.id) || group.pendingDeltas.includes(evt.hash))) {
       State.resolvePendingDelta(this.currentGroupId, evtHash);
+      State.resolvePendingDelta(this.currentGroupId, evt.id);
+      State.resolvePendingDelta(this.currentGroupId, evt.hash);
     }
 
     const existing = group.events.find(e => (e.hash === evtHash || e.id === evtHash));
@@ -415,7 +425,7 @@ const App = {
     if (hash.startsWith('#group=')) {
       this.currentGroupId = hash.split('=')[1];
       let group = State.getGroup(this.currentGroupId);
-      
+
       // Always trigger asynchronous cloud history sync to invalidate/update localStorage with new cloud entries
       this.syncGroupFromCloud(this.currentGroupId);
 

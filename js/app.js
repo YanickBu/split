@@ -72,9 +72,12 @@ const App = {
     // Attempt sync to cloud storage
     const binOk = await JSONBin.sync(group);
 
-    // If successfully delivered to cloud, mark event as synced
+    // If successfully delivered to cloud, mark event as synced and update UI
     if (pubOk || binOk) {
       State.markEventSynced(groupId, evt.hash || evt.id);
+      if (this.currentGroupId === groupId) {
+        this.render();
+      }
     }
   },
 
@@ -173,12 +176,12 @@ const App = {
       
       const id = State.createGroup(name, currency, creator);
       const group = State.getGroup(id);
-      
-      await this.publishAndSync(id, group.events[0]);
 
       document.getElementById('newGroupModal').close();
       e.target.reset();
       window.location.hash = `group=${id}`;
+      
+      await this.publishAndSync(id, group.events[0]);
     });
     
     // Add Member Form
@@ -187,11 +190,15 @@ const App = {
       const name = document.getElementById('memberName').value;
       if (this.currentGroupId && name) {
         const evt = State.appendEvent(this.currentGroupId, 'ADD_MEMBER', { name });
+        document.getElementById('addMemberModal').close();
+        e.target.reset();
+        this.render();
+
         await this.publishAndSync(this.currentGroupId, evt);
+      } else {
+        document.getElementById('addMemberModal').close();
+        e.target.reset();
       }
-      document.getElementById('addMemberModal').close();
-      e.target.reset();
-      this.render();
     });
     
     // Add Expense Form
@@ -231,12 +238,12 @@ const App = {
         payer,
         rateSnapshot: Currency.rates
       });
-      
-      await this.publishAndSync(this.currentGroupId, evt);
-      
+
       document.getElementById('addExpenseModal').close();
       e.target.reset();
       this.render();
+      
+      await this.publishAndSync(this.currentGroupId, evt);
     });
     
     // Quick Chips
@@ -280,8 +287,8 @@ const App = {
 
     if (confirm(`Remove ${name}?`)) {
       const evt = State.appendEvent(this.currentGroupId, 'REMOVE_MEMBER', { name });
-      await this.publishAndSync(this.currentGroupId, evt);
       this.render();
+      await this.publishAndSync(this.currentGroupId, evt);
     }
   },
   
@@ -306,8 +313,8 @@ const App = {
   async stornoExpense(expenseId) {
     if (confirm("Void this expense?")) {
       const evt = State.appendEvent(this.currentGroupId, 'STORNO_EXPENSE', { expenseId });
-      await this.publishAndSync(this.currentGroupId, evt);
       this.render();
+      await this.publishAndSync(this.currentGroupId, evt);
     }
   },
   

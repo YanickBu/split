@@ -79,23 +79,24 @@ const Components = {
               const isDiffCurrency = e.data.originalCurrency !== group.currency;
               const isPendingRate = e.data.isPendingRate;
               const isPendingDelta = pendingDeltas.includes(evtId) || pendingDeltas.includes(e.hash) || pendingDeltas.includes(e.id);
+              const strikethroughClass = isStorno ? 'strikethrough' : '';
               
               return `
               <div class="expense-item ${isStorno ? 'storno' : ''}">
                 <div class="expense-info">
-                  <h4 class="${isStorno ? 'strikethrough' : ''}">
+                  <h4 class="${strikethroughClass}">
                     ${e.data.title}
                     ${isPendingDelta ? `<span class="sync-badge pending">⏳ Pending</span>` : ''}
                   </h4>
-                  <div class="expense-meta">${e.data.payer} • ${new Date(e.ts).toLocaleDateString()}</div>
+                  <div class="expense-meta ${strikethroughClass}">${e.data.payer} • ${new Date(e.ts).toLocaleDateString()}</div>
                 </div>
                 <div class="expense-right">
-                  <div class="expense-amounts ${isStorno ? 'strikethrough' : ''}">
+                  <div class="expense-amounts ${strikethroughClass}">
                     ${isDiffCurrency ? `
-                      <div class="expense-amount-primary">${isPendingRate ? '⏳ Rate pending' : `≈ ${Currency.format(e.data.groupAmount, group.currency)}`}</div>
-                      <div class="expense-amount-secondary">${origAmount} ${e.data.originalCurrency}</div>
+                      <div class="expense-amount-primary ${strikethroughClass}">${isPendingRate ? '⏳ Rate pending' : `≈ ${Currency.format(e.data.groupAmount, group.currency)}`}</div>
+                      <div class="expense-amount-secondary ${strikethroughClass}">${origAmount} ${e.data.originalCurrency}</div>
                     ` : `
-                      <div class="expense-amount-primary">${origAmount}</div>
+                      <div class="expense-amount-primary ${strikethroughClass}">${origAmount}</div>
                     `}
                   </div>
                   ${!isStorno ? `

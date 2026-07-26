@@ -70,6 +70,7 @@ main { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 16px;
 .expense-void-btn { background: transparent; border: 1px solid transparent; color: var(--text-dim); font-size: 13px; padding: 3px 6px; border-radius: 6px; cursor: pointer; line-height: 1; transition: all 0.15s ease; }
 .expense-void-btn:hover { color: var(--danger); background: rgba(255, 68, 68, 0.12); border-color: rgba(255, 68, 68, 0.25); }
 .expense-item.storno { opacity: 0.5; }
+.expense-item.storno * { text-decoration: line-through; text-decoration-color: var(--text-dim); }
 .strikethrough { text-decoration: line-through; text-decoration-color: var(--text-dim); }
 
 .empty-state { text-align: center; padding: 24px 12px; color: var(--text-dim); font-size: 13px; }

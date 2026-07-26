@@ -1,6 +1,7 @@
 const App = {
   currentGroupId: null,
   lastExpenseCurrency: null,
+  lastExpensePayer: null,
   
   async init() {
     await Currency.fetchRates();
@@ -75,8 +76,13 @@ const App = {
     // Attempt sync to cloud storage
     const binOk = await JSONBin.sync(group);
 
-    // Verify receipt by reconciling against cloud history
-    await this.syncGroupFromCloud(groupId);
+    // If successfully delivered to cloud, mark event as synced and update UI
+    if (pubOk || binOk) {
+      State.resolvePendingDelta(groupId, evt.hash || evt.id);
+      if (this.currentGroupId === groupId) {
+        this.render();
+      }
+    }
   },
 
   async syncGroupFromCloud(groupId) {
@@ -231,12 +237,19 @@ const App = {
         return;
       }
       
-      // Save last selected currency for future expenses
+      // Save last selected currency and payer for future expenses
       if (currency) {
         this.lastExpenseCurrency = currency;
         try {
           localStorage.setItem('split_last_expense_currency_' + this.currentGroupId, currency);
           localStorage.setItem('split_last_expense_currency', currency);
+        } catch (err) {}
+      }
+
+      if (payer) {
+        this.lastExpensePayer = payer;
+        try {
+          localStorage.setItem('split_last_expense_payer_' + this.currentGroupId, payer);
         } catch (err) {}
       }
       
@@ -309,6 +322,7 @@ const App = {
   showAddExpense() {
     const group = State.getGroup(this.currentGroupId);
     
+    // Preselect last currency used
     let defaultCurr = group.currency || 'USD';
     try {
       const savedGroupCurr = localStorage.getItem('split_last_expense_currency_' + this.currentGroupId);
@@ -317,9 +331,21 @@ const App = {
     } catch (err) {}
     
     CurrencyPicker.setButtonValue('expenseCurrency', 'expenseCurrencyBtn', defaultCurr);
+
+    // Preselect last payer used
+    let defaultPayer = null;
+    try {
+      defaultPayer = localStorage.getItem('split_last_expense_payer_' + this.currentGroupId) || this.lastExpensePayer;
+    } catch (err) {}
+
+    if (!defaultPayer || !group.members.includes(defaultPayer)) {
+      defaultPayer = group.members[0];
+    }
     
     const selPayer = document.getElementById('expensePayer');
-    selPayer.innerHTML = group.members.map(m => `<option value="${m}">${m}</option>`).join('');
+    selPayer.innerHTML = group.members.map(m => 
+      `<option value="${m}" ${m === defaultPayer ? 'selected' : ''}>${m}</option>`
+    ).join('');
     
     document.getElementById('addExpenseModal').showModal();
   },

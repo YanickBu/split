@@ -1,4 +1,20 @@
 const Components = {
+  getCategoryEmoji(title) {
+    if (!title) return '💸';
+    const t = title.toLowerCase();
+    if (t.includes('pizza') || t.includes('food') || t.includes('dinner') || t.includes('lunch') || t.includes('eat') || t.includes('restaurant') || t.includes('burger') || t.includes('sushi')) return '🍕';
+    if (t.includes('coffee') || t.includes('cafe') || t.includes('starbucks') || t.includes('tea') || t.includes('snack') || t.includes('espresso')) return '☕';
+    if (t.includes('beer') || t.includes('drink') || t.includes('bar') || t.includes('cocktail') || t.includes('wine') || t.includes('pub') || t.includes('alcohol')) return '🍺';
+    if (t.includes('uber') || t.includes('taxi') || t.includes('cab') || t.includes('ride') || t.includes('bus') || t.includes('train') || t.includes('metro') || t.includes('transit')) return '🚖';
+    if (t.includes('grocery') || t.includes('supermarket') || t.includes('market') || t.includes('groceries') || t.includes('food shopping')) return '🛒';
+    if (t.includes('rent') || t.includes('airbnb') || t.includes('hotel') || t.includes('stay') || t.includes('hostel') || t.includes('booking')) return '🏠';
+    if (t.includes('ticket') || t.includes('movie') || t.includes('cinema') || t.includes('concert') || t.includes('show') || t.includes('game') || t.includes('event')) return '🎟️';
+    if (t.includes('flight') || t.includes('plane') || t.includes('airline') || t.includes('fly')) return '✈️';
+    if (t.includes('fuel') || t.includes('gas') || t.includes('petrol') || t.includes('charging')) return '⛽';
+    if (t.includes('shopping') || t.includes('cloth') || t.includes('shoes') || t.includes('apparel')) return '🛍️';
+    return '💸';
+  },
+
   renderGroupsList(groups) {
     const list = Object.values(groups);
     if (list.length === 0) {
@@ -80,12 +96,13 @@ const Components = {
               const isPendingRate = e.data.isPendingRate;
               const isPendingDelta = pendingDeltas.includes(evtId) || pendingDeltas.includes(e.hash) || pendingDeltas.includes(e.id);
               const strikethroughClass = isStorno ? 'strikethrough' : '';
+              const emoji = this.getCategoryEmoji(e.data.title);
               
               return `
               <div class="expense-item ${isStorno ? 'storno' : ''}">
                 <div class="expense-info">
                   <h4 class="${strikethroughClass}">
-                    ${e.data.title}
+                    <span>${emoji} ${e.data.title}</span>
                     ${isPendingDelta ? `<span class="sync-badge pending">⏳ Pending</span>` : ''}
                   </h4>
                   <div class="expense-meta ${strikethroughClass}">${e.data.payer} • ${new Date(e.ts).toLocaleDateString()}</div>

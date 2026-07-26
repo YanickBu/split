@@ -4,11 +4,18 @@ const App = {
   lastExpensePayer: null,
   
   async init() {
+    this.registerServiceWorker();
     await Currency.fetchRates();
     this.setupRoutes();
     this.setupListeners();
     this.setupOnlineSync();
     await this.render();
+  },
+
+  registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW registration skipped:', err));
+    }
   },
 
   setupRoutes() {
@@ -392,6 +399,20 @@ const App = {
       this.goHome();
     }
   },
+
+  showQRCode() {
+    if (!this.currentGroupId) return;
+    const url = window.location.href;
+    const svg = QRCode.generateSVG(url, 220);
+    const container = document.getElementById('qrCodeContainer');
+    if (container) {
+      container.innerHTML = svg;
+    }
+    const modal = document.getElementById('qrModal');
+    if (modal) {
+      modal.showModal();
+    }
+  },
   
   async shareSummary() {
     const group = State.getGroup(this.currentGroupId);
@@ -500,6 +521,7 @@ const App = {
             <h1>${group.name}</h1>
           </div>
           <div class="header-actions">
+            <button onclick="App.showQRCode()" class="btn-icon" title="Show QR Code">📱 QR</button>
             <button onclick="App.shareSummary()" class="btn-icon">📤 Share</button>
             <button onclick="App.deleteGroup()" class="btn-icon" style="color:var(--danger)">🗑️</button>
           </div>

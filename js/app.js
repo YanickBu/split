@@ -57,7 +57,8 @@ const App = {
           const evt = group.events.find(e => (e.hash === evtHash || e.id === evtHash));
           if (evt) {
             const pubOk = await EventSourcing.publish(group.id, evt);
-            if (pubOk) {
+            const binOk = await JSONBin.sync(group);
+            if (pubOk || binOk) {
               State.resolvePendingDelta(group.id, evtHash);
               State.resolvePendingDelta(group.id, evt.id);
               State.resolvePendingDelta(group.id, evt.hash);
@@ -73,7 +74,9 @@ const App = {
       State.save();
     }
 
-    this.render();
+    if (this.currentGroupId) {
+      this.render();
+    }
   },
 
   async publishAndSync(groupId, evt) {
@@ -571,6 +574,11 @@ const App = {
         // Render loading placeholder while initial cloud fetch occurs
         appEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-dim);">Connecting to group cloud ledger...</div>`;
         return;
+      }
+
+      // Automatically retry syncing any un-uploaded local pendingDeltas for this group
+      if (group.pendingDeltas && group.pendingDeltas.length > 0) {
+        this.syncOnline();
       }
 
       // Subscribe to real-time live SSE stream for this group

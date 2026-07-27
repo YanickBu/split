@@ -444,7 +444,7 @@ const App = {
     }
   },
 
-  showQRCode() {
+  showShareModal() {
     if (!this.currentGroupId) return;
     const url = window.location.href;
     const svg = QRCode.generateSVG(url, 220);
@@ -452,10 +452,28 @@ const App = {
     if (container) {
       container.innerHTML = svg;
     }
-    const modal = document.getElementById('qrModal');
+    const modal = document.getElementById('shareModal');
     if (modal) {
       modal.showModal();
     }
+  },
+
+  async shareUrl() {
+    const url = window.location.href;
+    const group = State.getGroup(this.currentGroupId);
+    const title = group ? group.name : 'Split';
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: title,
+          text: `Join ${title} on Split!`,
+          url: url
+        });
+        return;
+      } catch (e) {}
+    }
+    this.copyToClipboard(url, "Group link copied to clipboard!");
   },
   
   async shareSummary() {
@@ -471,16 +489,14 @@ const App = {
           text: summary,
           url: window.location.href
         });
-      } catch (e) {
-        this.copyToClipboard(summary);
-      }
-    } else {
-      this.copyToClipboard(summary);
+        return;
+      } catch (e) {}
     }
+    this.copyToClipboard(summary, "Summary copied to clipboard!");
   },
   
-  copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => alert("Summary copied to clipboard!"));
+  copyToClipboard(text, msg = "Copied to clipboard!") {
+    navigator.clipboard.writeText(text).then(() => alert(msg));
   },
 
   exportCSV(e) {
@@ -567,8 +583,7 @@ const App = {
             <h1>${group.name}</h1>
           </div>
           <div class="header-actions">
-            <button onclick="App.showQRCode()" class="btn-icon" title="Show QR Code">📱 QR</button>
-            <button onclick="App.shareSummary()" class="btn-icon">📤 Share</button>
+            <button onclick="App.showShareModal()" class="btn-icon">📤 Share</button>
             <button onclick="App.deleteGroup()" class="btn-icon" style="color:var(--danger)">🗑️</button>
           </div>
         </header>

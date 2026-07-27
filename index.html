@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#000000">
   <title>Split</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/styles.css?v=2.7.0">
+  <link rel="stylesheet" href="css/styles.css?v=2.8.0">
 </head>
 <body>
   <div id="app"></div>
@@ -102,17 +102,18 @@
     </div>
   </dialog>
 
-  <!-- QR Code Modal -->
-  <dialog id="qrModal">
+  <!-- Combined Share & QR Code Modal -->
+  <dialog id="shareModal">
     <div class="modal-content text-center" style="text-align: center;">
       <div class="currency-modal-header">
-        <h2>Group QR Code</h2>
-        <button type="button" class="btn-icon modal-close-btn" onclick="document.getElementById('qrModal').close()">✕</button>
+        <h2>Share Group</h2>
+        <button type="button" class="btn-icon modal-close-btn" onclick="document.getElementById('shareModal').close()">✕</button>
       </div>
       <div id="qrCodeContainer" style="margin: 16px auto; display: flex; justify-content: center;"></div>
-      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px;">Scan with any phone camera to join this group</p>
-      <div class="modal-actions">
-        <button type="button" class="btn-primary" onclick="App.shareSummary()">📤 Share Link</button>
+      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px;">Scan with phone camera or share link below</p>
+      <div class="modal-actions" style="flex-direction: column; gap: 8px;">
+        <button type="button" class="btn-primary" onclick="App.shareUrl()">📤 Share Link</button>
+        <button type="button" class="btn-cancel" onclick="App.shareSummary()">📋 Copy Summary</button>
       </div>
     </div>
   </dialog>
@@ -147,14 +148,14 @@
   </dialog>
 
   <!-- Scripts -->
-  <script src="js/currency.js?v=2.7.0"></script>
-  <script src="js/currencyPicker.js?v=2.7.0"></script>
-  <script src="js/state.js?v=2.7.0"></script>
-  <script src="js/settlement.js?v=2.7.0"></script>
-  <script src="js/jsonbin.js?v=2.7.0"></script>
-  <script src="js/eventsourcing.js?v=2.7.0"></script>
-  <script src="js/qrcode.js?v=2.7.0"></script>
-  <script src="js/components.js?v=2.7.0"></script>
-  <script src="js/app.js?v=2.7.0"></script>
+  <script src="js/currency.js?v=2.8.0"></script>
+  <script src="js/currencyPicker.js?v=2.8.0"></script>
+  <script src="js/state.js?v=2.8.0"></script>
+  <script src="js/settlement.js?v=2.8.0"></script>
+  <script src="js/jsonbin.js?v=2.8.0"></script>
+  <script src="js/eventsourcing.js?v=2.8.0"></script>
+  <script src="js/qrcode.js?v=2.8.0"></script>
+  <script src="js/components.js?v=2.8.0"></script>
+  <script src="js/app.js?v=2.8.0"></script>
 </body>
 </html>

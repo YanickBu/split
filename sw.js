@@ -1,4 +1,4 @@
-const CACHE_NAME = 'split-pwa-v2.5';
+const CACHE_NAME = 'split-pwa-v2.7';
 const ASSETS = [
   './',
   './index.html',
@@ -34,7 +34,7 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.url.includes('ntfy.sh') || e.request.url.includes('open.er-api.com')) {
+  if (e.request.url.includes('ntfy.sh') || e.request.url.includes('open.er-api.com') || e.request.url.includes('frankfurter.app') || e.request.url.includes('jsdelivr.net')) {
     return;
   }
   e.respondWith(

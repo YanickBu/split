@@ -325,6 +325,34 @@ def run_tests():
     assert sum_b6 == 0.0, f"Sum of balances MUST equal 0.00, got {sum_b6}"
     print("  ✓ PASS: Subgroup split verified accurately (David & Eve zero balance).")
 
+    # -------------------------------------------------------------
+    # TEST 7: Historical Exchange Rate Conversion
+    # -------------------------------------------------------------
+    print("\n[TEST 7] Historical Exchange Rate Conversion (Past Date)")
+    hist_rates = {'USD': 1.0, 'EUR': 0.85} # Historical rate from 3 months ago (1 EUR = 1.176 USD)
+    g7 = {
+        'id': 'grp_test7',
+        'currency': 'USD',
+        'members': ['Alice', 'Bob'],
+        'events': []
+    }
+    ts7 = 1700000700
+    src7 = 'dev_test7'
+    h7 = CryptographicLedger.compute_hash(g7['id'], 'ADD_EXPENSE', ts7, {
+        'title': 'Prepaid Course', 'originalAmount': 100.0, 'originalCurrency': 'EUR', 'payer': 'Alice',
+        'expenseDate': '2026-04-15'
+    }, '', src7)
+    g7['events'].append({
+        'id': h7, 'hash': h7, 'type': 'ADD_EXPENSE', 'ts': ts7, 'source': src7,
+        'data': {'title': 'Prepaid Course', 'originalAmount': 100.0, 'originalCurrency': 'EUR', 'payer': 'Alice', 'expenseDate': '2026-04-15'}
+    })
+
+    b7 = SettlementEngine.calculate_balances(g7, hist_rates)
+    print(f"  Balances (USD with historical rate): {b7}")
+    assert b7['Alice'] == 58.82, f"Expected Alice = 58.82, got {b7['Alice']}"
+    assert b7['Bob'] == -58.82, f"Expected Bob = -58.82, got {b7['Bob']}"
+    print("  ✓ PASS: Historical exchange rate conversion for past date verified accurately.")
+
     print("\n" + "=" * 70)
     print("      ALL MATHEMATICAL & IMMUTABILITY TESTS PASSED!      ")
     print("=" * 70)

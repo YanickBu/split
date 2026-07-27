@@ -35,9 +35,10 @@ const App = {
 
     // Resolve any offline pending exchange rates across all groups
     Object.values(State.data.groups).forEach(group => {
-      group.events.forEach(evt => {
+      group.events.forEach(async evt => {
         if (evt.type === 'ADD_EXPENSE' && evt.data && evt.data.isPendingRate) {
-          const conv = Currency.convertWithStatus(evt.data.originalAmount, evt.data.originalCurrency, group.currency);
+          const dateStr = evt.data.expenseDate || new Date(evt.ts).toISOString().split('T')[0];
+          const conv = await Currency.convertWithDate(evt.data.originalAmount, evt.data.originalCurrency, group.currency, dateStr);
           if (!conv.isPending) {
             evt.data.groupAmount = conv.amount;
             evt.data.isPendingRate = false;
@@ -248,6 +249,7 @@ const App = {
       const amount = parseFloat(amountStr.replace(/,/g, '.'));
       const currency = document.getElementById('expenseCurrency').value;
       const payer = document.getElementById('expensePayer').value;
+      const expenseDate = document.getElementById('expenseDate').value || new Date().toISOString().split('T')[0];
 
       // Subgroup member selection
       const activeMemberChips = document.querySelectorAll('#expenseSplitMembers .member-split-chip.active');
@@ -279,7 +281,8 @@ const App = {
         } catch (err) {}
       }
       
-      const conv = Currency.convertWithStatus(amount, currency, group.currency);
+      // Convert currency using historical rate for selected expense date
+      const conv = await Currency.convertWithDate(amount, currency, group.currency, expenseDate);
       
       const evt = State.appendEvent(this.currentGroupId, 'ADD_EXPENSE', {
         title,
@@ -288,6 +291,7 @@ const App = {
         groupAmount: conv.amount,
         isPendingRate: conv.isPending,
         payer,
+        expenseDate,
         splitMembers,
         rateSnapshot: Currency.rates
       });
@@ -347,6 +351,12 @@ const App = {
   
   showAddExpense() {
     const group = State.getGroup(this.currentGroupId);
+
+    // Default expense date to today's date YYYY-MM-DD
+    const dateInput = document.getElementById('expenseDate');
+    if (dateInput) {
+      dateInput.value = new Date().toISOString().split('T')[0];
+    }
     
     // Preselect last currency used
     let defaultCurr = group.currency || 'USD';
@@ -498,7 +508,7 @@ const App = {
       const isPendingRate = evt.data.isPendingRate;
       
       const status = isStorno ? 'Voided' : (isPendingRate ? 'Pending Rate' : 'Active');
-      const dateStr = new Date(evt.ts).toISOString().split('T')[0];
+      const dateStr = evt.data.expenseDate || new Date(evt.ts).toISOString().split('T')[0];
       const titleEsc = `"${(evt.data.title || '').replace(/"/g, '""')}"`;
       const payerEsc = `"${(evt.data.payer || '').replace(/"/g, '""')}"`;
       const splitStr = `"${(evt.data.splitMembers || group.members).join(', ').replace(/"/g, '""')}"`;

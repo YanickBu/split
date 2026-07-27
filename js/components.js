@@ -102,6 +102,7 @@ const Components = {
               const splitMembers = (e.data.splitMembers && Array.isArray(e.data.splitMembers)) ? e.data.splitMembers : group.members;
               const isSubgroup = splitMembers.length < group.members.length;
               const subgroupText = isSubgroup ? ` • For ${splitMembers.join(', ')}` : '';
+              const displayDate = e.data.expenseDate ? new Date(e.data.expenseDate + 'T00:00:00').toLocaleDateString() : new Date(e.ts).toLocaleDateString();
 
               return `
               <div class="expense-item ${isStorno ? 'storno' : ''}">
@@ -110,7 +111,7 @@ const Components = {
                     <span>${emoji} ${e.data.title}</span>
                     ${isPendingDelta ? `<span class="sync-badge pending">⏳ Pending</span>` : ''}
                   </h4>
-                  <div class="expense-meta ${strikethroughClass}">${e.data.payer}${subgroupText} • ${new Date(e.ts).toLocaleDateString()}</div>
+                  <div class="expense-meta ${strikethroughClass}">${e.data.payer}${subgroupText} • ${displayDate}</div>
                 </div>
                 <div class="expense-right">
                   <div class="expense-amounts ${strikethroughClass}">

@@ -194,6 +194,71 @@ const Currency = {
     return false;
   },
 
+  async fetchHistoricalRates(dateStr) {
+    if (!dateStr) return this.rates;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (dateStr === todayStr) {
+      await this.fetchRates();
+      return this.rates;
+    }
+
+    const cacheKey = 'split_hist_rates_' + dateStr;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (err) {}
+    }
+
+    try {
+      const res = await fetch(`https://api.frankfurter.app/${dateStr}?from=USD`);
+      const data = await res.json();
+      if (data && data.rates) {
+        data.rates['USD'] = 1.0;
+        localStorage.setItem(cacheKey, JSON.stringify(data.rates));
+        return data.rates;
+      }
+    } catch (e) {
+      console.warn(`Failed to fetch historical rates for ${dateStr} from Frankfurter, trying fallback...`, e);
+    }
+
+    try {
+      const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${dateStr}/v1/currencies/usd.json`);
+      const data = await res.json();
+      if (data && data.usd) {
+        const rates = {};
+        Object.keys(data.usd).forEach(k => {
+          rates[k.toUpperCase()] = 1.0 / data.usd[k];
+        });
+        rates['USD'] = 1.0;
+        localStorage.setItem(cacheKey, JSON.stringify(rates));
+        return rates;
+      }
+    } catch (e) {
+      console.warn(`Historical rate fallback failed for ${dateStr}, using current rates`);
+    }
+
+    return this.rates;
+  },
+
+  async convertWithDate(amount, fromCode, toCode, dateStr) {
+    const num = parseFloat(amount) || 0;
+    if (fromCode === toCode) {
+      return { amount: num, isPending: false };
+    }
+
+    const targetRates = await this.fetchHistoricalRates(dateStr);
+    if (!targetRates || !targetRates[fromCode] || !targetRates[toCode]) {
+      return this.convertWithStatus(amount, fromCode, toCode);
+    }
+
+    const rateFrom = targetRates[fromCode];
+    const rateTo = targetRates[toCode];
+    const converted = (num / rateFrom) * rateTo;
+    return { amount: converted, isPending: false };
+  },
+
   getAllCurrencies() {
     const map = new Map();
     this.currencies.forEach(c => map.set(c.code, { ...c }));

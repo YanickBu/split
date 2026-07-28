@@ -2,6 +2,7 @@ const App = {
   currentGroupId: null,
   lastExpenseCurrency: null,
   lastExpensePayer: null,
+  _retryTimerId: null,
   
   async init() {
     this.registerServiceWorker();
@@ -24,18 +25,50 @@ const App = {
 
   setupOnlineSync() {
     window.addEventListener('online', () => {
-      console.log("[App] Device back online! Replaying queued local deltas and resolving exchange rates...");
+      console.log("[App] Device back online!");
+      this._updateOfflinePill();
       this.syncOnline();
     });
+    window.addEventListener('offline', () => {
+      console.log("[App] Device went offline.");
+      this._updateOfflinePill();
+    });
+  },
+
+  _updateOfflinePill() {
+    const pill = document.getElementById('offlinePill');
+    if (pill) {
+      pill.style.display = navigator.onLine ? 'none' : 'inline-flex';
+    }
+  },
+
+  _startRetryLoop() {
+    this._stopRetryLoop();
+    this._retryTimerId = setInterval(() => {
+      const group = this.currentGroupId ? State.getGroup(this.currentGroupId) : null;
+      if (group && group.pendingDeltas && group.pendingDeltas.length > 0 && navigator.onLine) {
+        console.log(`[App] Retry loop: ${group.pendingDeltas.length} pending, retrying...`);
+        this.syncOnline();
+      } else if (!group || !group.pendingDeltas || group.pendingDeltas.length === 0) {
+        this._stopRetryLoop();
+      }
+    }, 20000);
+  },
+
+  _stopRetryLoop() {
+    if (this._retryTimerId) {
+      clearInterval(this._retryTimerId);
+      this._retryTimerId = null;
+    }
   },
 
   async syncOnline() {
     await Currency.fetchRates();
     let updatedPending = false;
 
-    // Resolve any offline pending exchange rates across all groups
-    Object.values(State.data.groups).forEach(group => {
-      group.events.forEach(async evt => {
+    // Resolve any offline pending exchange rates across all groups (fixed: for..of instead of forEach)
+    for (const group of Object.values(State.data.groups)) {
+      for (const evt of group.events) {
         if (evt.type === 'ADD_EXPENSE' && evt.data && evt.data.isPendingRate) {
           const dateStr = evt.data.expenseDate || new Date(evt.ts).toISOString().split('T')[0];
           const conv = await Currency.convertWithDate(evt.data.originalAmount, evt.data.originalCurrency, group.currency, dateStr);
@@ -46,8 +79,8 @@ const App = {
             updatedPending = true;
           }
         }
-      });
-    });
+      }
+    }
 
     // Upload & replay unsynced local deltas across all groups
     for (const group of Object.values(State.data.groups)) {
@@ -57,8 +90,7 @@ const App = {
           const evt = group.events.find(e => (e.hash === evtHash || e.id === evtHash));
           if (evt) {
             const pubOk = await EventSourcing.publish(group.id, evt);
-            const binOk = await JSONBin.sync(group);
-            if (pubOk || binOk) {
+            if (pubOk) {
               State.resolvePendingDelta(group.id, evtHash);
               State.resolvePendingDelta(group.id, evt.id);
               State.resolvePendingDelta(group.id, evt.hash);
@@ -74,6 +106,7 @@ const App = {
       State.save();
     }
 
+    this._updateOfflinePill();
     if (this.currentGroupId) {
       this.render();
     }
@@ -96,6 +129,9 @@ const App = {
       if (this.currentGroupId === groupId) {
         this.render();
       }
+    } else {
+      // Failed to sync — start retry loop
+      this._startRetryLoop();
     }
 
     // Also trigger cloud reconciliation in background
@@ -129,7 +165,6 @@ const App = {
           history.forEach(remoteEvt => {
             const hashKey = remoteEvt.hash || remoteEvt.id;
             
-            // 1. If cloud history contains a hash from our local pendingDeltas, resolve it!
             if (group.pendingDeltas && (group.pendingDeltas.includes(hashKey) || group.pendingDeltas.includes(remoteEvt.id) || group.pendingDeltas.includes(remoteEvt.hash))) {
               State.resolvePendingDelta(groupId, hashKey);
               State.resolvePendingDelta(groupId, remoteEvt.id);
@@ -137,7 +172,6 @@ const App = {
               updated = true;
             }
 
-            // 2. If cloud history contains a new event not in local events, merge it!
             const exists = group.events.some(e => (e.hash === hashKey || e.id === hashKey));
             if (!exists && remoteEvt.type) {
               remoteEvt.synced = true;
@@ -156,7 +190,7 @@ const App = {
         }
       }
     } catch (err) {
-      console.warn(`[App] Could not invalidate/sync cloud history for ${groupId}:`, err);
+      console.warn(`[App] Could not sync cloud history for ${groupId}:`, err);
     }
   },
 
@@ -326,6 +360,7 @@ const App = {
   
   goHome() {
     EventSourcing.unsubscribe();
+    this._stopRetryLoop();
     window.location.hash = '';
   },
   
@@ -428,11 +463,13 @@ const App = {
       await this.publishAndSync(this.currentGroupId, evt);
 
       const group = State.getGroup(this.currentGroupId);
-      for (const e of group.events) {
-        if (e.type === 'ADD_EXPENSE') {
-          const stornoEvt = State.appendEvent(this.currentGroupId, 'STORNO_EXPENSE', { expenseId: e.id });
-          await this.publishAndSync(this.currentGroupId, stornoEvt);
-        }
+      // Snapshot current expense IDs before looping to avoid mutating while iterating
+      const expenseIds = group.events
+        .filter(e => e.type === 'ADD_EXPENSE')
+        .map(e => e.id || e.hash);
+      for (const eid of expenseIds) {
+        const stornoEvt = State.appendEvent(this.currentGroupId, 'STORNO_EXPENSE', { expenseId: eid });
+        await this.publishAndSync(this.currentGroupId, stornoEvt);
       }
       this.render();
       alert("All squared up!");
@@ -442,6 +479,7 @@ const App = {
   deleteGroup() {
     if (confirm("Permanently delete this group?")) {
       EventSourcing.unsubscribe();
+      this._stopRetryLoop();
       State.deleteGroup(this.currentGroupId);
       this.goHome();
     }
@@ -567,28 +605,53 @@ const App = {
       this.currentGroupId = hash.split('=')[1];
       let group = State.getGroup(this.currentGroupId);
 
-      // Always trigger asynchronous cloud history sync to invalidate/update localStorage with new cloud entries
+      // Always trigger asynchronous cloud history sync
       this.syncGroupFromCloud(this.currentGroupId);
 
       if (!group) {
-        // Render loading placeholder while initial cloud fetch occurs
-        appEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-dim);">Connecting to group cloud ledger...</div>`;
+        // Friendly offline message for new group links
+        if (!navigator.onLine) {
+          appEl.innerHTML = `
+            <header>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <button onclick="App.goHome()" class="btn-icon">←</button>
+                <h1>Group</h1>
+              </div>
+            </header>
+            <main>
+              <div class="empty-state" style="padding: 40px 20px;">
+                <div style="font-size: 32px; margin-bottom: 12px;">📴</div>
+                <div style="font-size: 15px; color: var(--text); margin-bottom: 6px;">You're offline</div>
+                <div style="font-size: 13px;">Reconnect to the internet to load this group for the first time.</div>
+              </div>
+            </main>`;
+        } else {
+          appEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-dim);">Connecting to group cloud ledger...</div>`;
+        }
         return;
       }
 
       // Automatically retry syncing any un-uploaded local pendingDeltas for this group
       if (group.pendingDeltas && group.pendingDeltas.length > 0) {
         this.syncOnline();
+        this._startRetryLoop();
+      } else {
+        this._stopRetryLoop();
       }
 
       // Subscribe to real-time live SSE stream for this group
       EventSourcing.subscribe(this.currentGroupId, (evt) => this.handleLiveEvent(evt));
+
+      const offlinePillHtml = !navigator.onLine
+        ? '<span id="offlinePill" class="offline-pill">📡 Offline</span>'
+        : '<span id="offlinePill" class="offline-pill" style="display:none">📡 Offline</span>';
       
       appEl.innerHTML = `
         <header>
           <div style="display:flex; align-items:center; gap:12px;">
             <button onclick="App.goHome()" class="btn-icon">←</button>
             <h1>${group.name}</h1>
+            ${offlinePillHtml}
           </div>
           <div class="header-actions">
             <button onclick="App.showShareModal()" class="btn-icon">📤 Share</button>
@@ -602,6 +665,7 @@ const App = {
       `;
     } else {
       EventSourcing.unsubscribe();
+      this._stopRetryLoop();
       this.currentGroupId = null;
       appEl.innerHTML = `
         <header>

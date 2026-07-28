@@ -1,4 +1,9 @@
 const Components = {
+  _esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  },
+
   getCategoryEmoji(title) {
     if (!title) return '💸';
     const t = title.toLowerCase();
@@ -25,13 +30,13 @@ const Components = {
       ${list.map(g => {
         const pendingCount = (g.pendingDeltas || []).length;
         return `
-        <div class="card clickable group-item" onclick="App.openGroup('${g.id}')">
+        <div class="card clickable group-item" onclick="App.openGroup('${this._esc(g.id)}')">
           <div class="group-info">
             <h3>
-              ${g.name}
+              ${this._esc(g.name)}
               ${pendingCount > 0 ? `<span class="sync-badge pending">⏳ Pending</span>` : ''}
             </h3>
-            <p>${g.members.length} members • ${g.currency}</p>
+            <p>${g.members.length} members • ${this._esc(g.currency)}</p>
           </div>
           <div class="group-arrow">→</div>
         </div>
@@ -61,8 +66,8 @@ const Components = {
         <div class="members-list">
           ${group.members.map(m => `
             <div class="member-chip">
-              👤 ${m}
-              <span class="member-remove" onclick="App.removeMember('${m}')">×</span>
+              👤 ${this._esc(m)}
+              <span class="member-remove" onclick="App.removeMember('${this._esc(m)}')">×</span>
             </div>
           `).join('')}
           <button class="btn-icon" onclick="App.showAddMember()">+ Add</button>
@@ -75,7 +80,7 @@ const Components = {
           <div class="balances-list">
             ${settlements.map(s => `
               <div class="balance-item">
-                <span>${s.from} ➡️ ${s.to}</span>
+                <span>${this._esc(s.from)} ➡️ ${this._esc(s.to)}</span>
                 <span class="balance-positive">${Currency.format(s.amount, group.currency)}</span>
               </div>
             `).join('')}
@@ -101,29 +106,29 @@ const Components = {
               // Subgroup split details
               const splitMembers = (e.data.splitMembers && Array.isArray(e.data.splitMembers)) ? e.data.splitMembers : group.members;
               const isSubgroup = splitMembers.length < group.members.length;
-              const subgroupText = isSubgroup ? ` • For ${splitMembers.join(', ')}` : '';
+              const subgroupText = isSubgroup ? ` • For ${splitMembers.map(m => this._esc(m)).join(', ')}` : '';
               const displayDate = e.data.expenseDate ? new Date(e.data.expenseDate + 'T00:00:00').toLocaleDateString() : new Date(e.ts).toLocaleDateString();
 
               return `
               <div class="expense-item ${isStorno ? 'storno' : ''}">
                 <div class="expense-info">
                   <h4 class="${strikethroughClass}">
-                    <span>${emoji} ${e.data.title}</span>
+                    <span>${emoji} ${this._esc(e.data.title)}</span>
                     ${isPendingDelta ? `<span class="sync-badge pending">⏳ Pending</span>` : ''}
                   </h4>
-                  <div class="expense-meta ${strikethroughClass}">${e.data.payer}${subgroupText} • ${displayDate}</div>
+                  <div class="expense-meta ${strikethroughClass}">${this._esc(e.data.payer)}${subgroupText} • ${displayDate}</div>
                 </div>
                 <div class="expense-right">
                   <div class="expense-amounts ${strikethroughClass}">
                     ${isDiffCurrency ? `
                       <div class="expense-amount-primary ${strikethroughClass}">${isPendingRate ? '⏳ Rate pending' : `≈ ${Currency.format(e.data.groupAmount, group.currency)}`}</div>
-                      <div class="expense-amount-secondary ${strikethroughClass}">${origAmount} ${e.data.originalCurrency}</div>
+                      <div class="expense-amount-secondary ${strikethroughClass}">${origAmount} ${this._esc(e.data.originalCurrency)}</div>
                     ` : `
                       <div class="expense-amount-primary ${strikethroughClass}">${origAmount}</div>
                     `}
                   </div>
                   ${!isStorno ? `
-                    <button class="expense-void-btn" title="Void expense" onclick="App.stornoExpense('${evtId}')">✕</button>
+                    <button class="expense-void-btn" title="Void expense" onclick="App.stornoExpense('${this._esc(evtId)}')">✕</button>
                   ` : ''}
                 </div>
               </div>

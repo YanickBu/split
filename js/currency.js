@@ -172,6 +172,7 @@ const Currency = {
     
     try {
       const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if (data && data.rates) {
         this.rates = data.rates;
@@ -213,6 +214,7 @@ const Currency = {
 
     try {
       const res = await fetch(`https://api.frankfurter.app/${dateStr}?from=USD`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if (data && data.rates) {
         data.rates['USD'] = 1.0;
@@ -225,11 +227,12 @@ const Currency = {
 
     try {
       const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${dateStr}/v1/currencies/usd.json`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if (data && data.usd) {
         const rates = {};
         Object.keys(data.usd).forEach(k => {
-          rates[k.toUpperCase()] = 1.0 / data.usd[k];
+          rates[k.toUpperCase()] = data.usd[k];
         });
         rates['USD'] = 1.0;
         localStorage.setItem(cacheKey, JSON.stringify(rates));

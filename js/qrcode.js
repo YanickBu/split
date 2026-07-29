@@ -451,8 +451,7 @@ const QRCode = (function() {
     try {
       // Determine type number based on length
       var typeNum = 4;
-      if (text.length > 80) typeNum = 8;
-      if (text.length > 150) typeNum = 12;
+      if (text.length > 47) typeNum = 5;
 
       var qr = new QRCode(typeNum, 1); // 1 = L error correction
       qr.addData(text);
@@ -477,7 +476,7 @@ const QRCode = (function() {
       return svg;
     } catch (e) {
       console.warn("QR generation fallback:", e);
-      return `<div style="padding:20px; text-align:center; color:#fff;">${text}</div>`;
+      return `<div style="padding:20px; text-align:center; color:#fff; word-break:break-all; font-size:12px;">QR generation failed</div>`;
     }
   }
 

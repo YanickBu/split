@@ -24,8 +24,9 @@ const EventSourcing = {
   subscribe(groupId, onEvent) {
     if (!groupId) return () => {};
     
-    // Unsubscribe from previous group if active
-    if (this.activeSubscription && this.activeGroupId !== groupId) {
+    // Unsubscribe from previous group if active, or ignore if already subscribed to same group
+    if (this.activeSubscription) {
+      if (this.activeGroupId === groupId) return () => this.unsubscribe();
       this.unsubscribe();
     }
 

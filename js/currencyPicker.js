@@ -12,6 +12,16 @@ const CurrencyPicker = {
         this.renderList(e.target.value);
       });
     }
+    // Event delegation for currency item clicks (no inline onclick with user data)
+    const listEl = document.getElementById('currencyPickerList');
+    if (listEl) {
+      listEl.addEventListener('click', (e) => {
+        const item = e.target.closest('[data-action="selectCurrency"]');
+        if (item && item.dataset.code) {
+          this.select(item.dataset.code);
+        }
+      });
+    }
   },
 
   open(targetInputId, targetBtnId) {
@@ -56,8 +66,8 @@ const CurrencyPicker = {
     if (inputEl) inputEl.value = c.code;
     if (btnEl) {
       btnEl.innerHTML = `
-        <span class="curr-badge">${c.symbol}</span>
-        <span class="curr-text"><strong>${c.code}</strong> — ${c.name}</span>
+        <span class="curr-badge">${_escHTML(c.symbol)}</span>
+        <span class="curr-text"><strong>${_escHTML(c.code)}</strong> — ${_escHTML(c.name)}</span>
         <span class="curr-search-icon">🔍</span>
       `;
     }
@@ -90,7 +100,7 @@ const CurrencyPicker = {
     const filtered = Currency.search(query);
 
     if (filtered.length === 0) {
-      listEl.innerHTML = `<div class="empty-search">No currencies found matching "${query}"</div>`;
+      listEl.innerHTML = `<div class="empty-search">No currencies found matching "${_escHTML(query)}"</div>`;
       return;
     }
 
@@ -103,11 +113,11 @@ const CurrencyPicker = {
       }
 
       return `
-        <div class="currency-item ${isSelected ? 'selected' : ''}" onclick="CurrencyPicker.select('${c.code}')">
-          <div class="currency-item-symbol">${c.symbol}</div>
+        <div class="currency-item ${isSelected ? 'selected' : ''}" data-action="selectCurrency" data-code="${_escHTML(c.code)}">
+          <div class="currency-item-symbol">${_escHTML(c.symbol)}</div>
           <div class="currency-item-details">
-            <div class="currency-item-code">${c.code} ${isSelected ? '✓' : ''}</div>
-            <div class="currency-item-name">${c.name}</div>
+            <div class="currency-item-code">${_escHTML(c.code)} ${isSelected ? '✓' : ''}</div>
+            <div class="currency-item-name">${_escHTML(c.name)}</div>
           </div>
           ${rateInfo}
         </div>

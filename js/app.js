@@ -1,3 +1,8 @@
+function _escHTML(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 const App = {
   currentGroupId: null,
   lastExpenseCurrency: null,
@@ -418,14 +423,14 @@ const App = {
     
     const selPayer = document.getElementById('expensePayer');
     selPayer.innerHTML = group.members.map(m => 
-      `<option value="${m}" ${m === defaultPayer ? 'selected' : ''}>${m}</option>`
+      `<option value="${_escHTML(m)}" ${m === defaultPayer ? 'selected' : ''}>${_escHTML(m)}</option>`
     ).join('');
 
     // Render Subgroup member split toggle chips
     const splitContainer = document.getElementById('expenseSplitMembers');
     if (splitContainer) {
       splitContainer.innerHTML = group.members.map(m => 
-        `<button type="button" class="chip member-split-chip active" data-member="${m}">✓ ${m}</button>`
+        `<button type="button" class="chip member-split-chip active" data-member="${_escHTML(m)}">✓ ${_escHTML(m)}</button>`
       ).join('');
 
       splitContainer.querySelectorAll('.member-split-chip').forEach(chip => {
@@ -650,7 +655,7 @@ const App = {
         <header>
           <div style="display:flex; align-items:center; gap:12px;">
             <button onclick="App.goHome()" class="btn-icon">←</button>
-            <h1>${group.name}</h1>
+            <h1>${_escHTML(group.name)}</h1>
             ${offlinePillHtml}
           </div>
           <div class="header-actions">

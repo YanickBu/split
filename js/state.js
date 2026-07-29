@@ -49,7 +49,7 @@ const State = {
   },
 
   createGroup(name, currency, creatorName) {
-    const id = 'grp_' + Date.now() + Math.random().toString(36).substr(2, 5);
+    const id = 'grp_' + Date.now() + Math.random().toString(36).substring(2, 7);
     const group = {
       id,
       name,

@@ -353,6 +353,229 @@ def run_tests():
     assert b7['Bob'] == -58.82, f"Expected Bob = -58.82, got {b7['Bob']}"
     print("  ✓ PASS: Historical exchange rate conversion for past date verified accurately.")
 
+    # -------------------------------------------------------------
+    # TEST 8: Uneven Penny Remainder Distribution & Net-Zero
+    # -------------------------------------------------------------
+    print("\n[TEST 8] Uneven Penny Remainder Distribution ($10 ÷ 3)")
+    g8 = {
+        'id': 'grp_test8',
+        'currency': 'USD',
+        'members': ['X', 'Y', 'Z'],
+        'events': []
+    }
+    src8 = 'dev_test8'
+    h8 = CryptographicLedger.compute_hash(g8['id'], 'ADD_EXPENSE', 1700000800, {
+        'title': 'Snack', 'originalAmount': 10.0, 'originalCurrency': 'USD', 'payer': 'X'
+    }, '', src8)
+    g8['events'].append({
+        'id': h8, 'hash': h8, 'type': 'ADD_EXPENSE', 'ts': 1700000800, 'source': src8,
+        'data': {'title': 'Snack', 'originalAmount': 10.0, 'originalCurrency': 'USD', 'payer': 'X'}
+    })
+
+    b8 = SettlementEngine.calculate_balances(g8, rates)
+    sum_b8 = round(sum(b8.values()), 2)
+    print(f"  Balances: {b8}")
+    # $10 / 3 = $3.333... → first member gets $3.34, others get $3.33
+    assert b8['X'] == 6.66, f"Expected X = 6.66, got {b8['X']}"
+    assert b8['Y'] == -3.34 or b8['Y'] == -3.33, f"Expected Y ∈ {{-3.34, -3.33}}, got {b8['Y']}"
+    assert b8['Z'] == -3.33 or b8['Z'] == -3.32, f"Expected Z ∈ {{-3.33, -3.32}}, got {b8['Z']}"
+    assert sum_b8 == 0.0, f"Net-zero violated! Sum = {sum_b8}"
+    print("  ✓ PASS: Penny remainder distributed correctly; net-zero maintained.")
+
+    # -------------------------------------------------------------
+    # TEST 9: Storno + Subgroup Interaction
+    # -------------------------------------------------------------
+    print("\n[TEST 9] Storno Void on Subgroup Expense")
+    g9 = {
+        'id': 'grp_test9',
+        'currency': 'USD',
+        'members': ['Alice', 'Bob', 'Charlie'],
+        'events': []
+    }
+    src9 = 'dev_test9'
+    # Alice pays $60 split between Alice & Bob only (Charlie excluded)
+    h9_1 = CryptographicLedger.compute_hash(g9['id'], 'ADD_EXPENSE', 1700000900, {
+        'title': 'Private Dinner', 'originalAmount': 60.0, 'originalCurrency': 'USD',
+        'payer': 'Alice', 'splitMembers': ['Alice', 'Bob']
+    }, '', src9)
+    g9['events'].append({
+        'id': h9_1, 'hash': h9_1, 'type': 'ADD_EXPENSE', 'ts': 1700000900, 'source': src9,
+        'data': {'title': 'Private Dinner', 'originalAmount': 60.0, 'originalCurrency': 'USD',
+                 'payer': 'Alice', 'splitMembers': ['Alice', 'Bob']}
+    })
+
+    b9_before = SettlementEngine.calculate_balances(g9, rates)
+    assert b9_before['Alice'] == 30.0, f"Pre-storno: Expected Alice = 30.0, got {b9_before['Alice']}"
+    assert b9_before['Bob'] == -30.0, f"Pre-storno: Expected Bob = -30.0, got {b9_before['Bob']}"
+    assert b9_before['Charlie'] == 0.0, f"Pre-storno: Expected Charlie = 0.0, got {b9_before['Charlie']}"
+
+    # Void the subgroup expense
+    h9_2 = CryptographicLedger.compute_hash(g9['id'], 'STORNO_EXPENSE', 1700001000, {
+        'expenseId': h9_1
+    }, h9_1, src9)
+    g9['events'].append({
+        'id': h9_2, 'hash': h9_2, 'type': 'STORNO_EXPENSE', 'ts': 1700001000, 'source': src9,
+        'data': {'expenseId': h9_1}
+    })
+
+    b9_after = SettlementEngine.calculate_balances(g9, rates)
+    print(f"  Balances after storno: {b9_after}")
+    assert b9_after['Alice'] == 0.0, f"Post-storno: Expected Alice = 0.0, got {b9_after['Alice']}"
+    assert b9_after['Bob'] == 0.0, f"Post-storno: Expected Bob = 0.0, got {b9_after['Bob']}"
+    assert b9_after['Charlie'] == 0.0, f"Post-storno: Expected Charlie = 0.0, got {b9_after['Charlie']}"
+    print("  ✓ PASS: Voiding subgroup expense correctly zeroes all balances; non-participants unaffected.")
+
+    # -------------------------------------------------------------
+    # TEST 10: Single Member Group Edge Case
+    # -------------------------------------------------------------
+    print("\n[TEST 10] Single Member Group (Solo Payer)")
+    g10 = {
+        'id': 'grp_test10',
+        'currency': 'USD',
+        'members': ['Solo'],
+        'events': []
+    }
+    src10 = 'dev_test10'
+    h10 = CryptographicLedger.compute_hash(g10['id'], 'ADD_EXPENSE', 1700001100, {
+        'title': 'Self Treat', 'originalAmount': 50.0, 'originalCurrency': 'USD', 'payer': 'Solo'
+    }, '', src10)
+    g10['events'].append({
+        'id': h10, 'hash': h10, 'type': 'ADD_EXPENSE', 'ts': 1700001100, 'source': src10,
+        'data': {'title': 'Self Treat', 'originalAmount': 50.0, 'originalCurrency': 'USD', 'payer': 'Solo'}
+    })
+
+    b10 = SettlementEngine.calculate_balances(g10, rates)
+    s10 = SettlementEngine.calculate_settlements(b10)
+    print(f"  Balances: {b10}")
+    print(f"  Settlements: {s10}")
+    assert b10['Solo'] == 0.0, f"Expected Solo = 0.0, got {b10['Solo']}"
+    assert len(s10) == 0, f"Expected 0 settlements, got {len(s10)}"
+    print("  ✓ PASS: Single member pays and owes themselves → balance = $0, no settlements.")
+
+    # -------------------------------------------------------------
+    # TEST 11: Multiple Payers with Settlement Minimization
+    # -------------------------------------------------------------
+    print("\n[TEST 11] Multiple Payers Settlement Minimization (4 members, 3 expenses)")
+    g11 = {
+        'id': 'grp_test11',
+        'currency': 'USD',
+        'members': ['Alice', 'Bob', 'Charlie', 'Diana'],
+        'events': []
+    }
+    src11 = 'dev_test11'
+    prev_hash = ''
+    # Alice pays $100 (split 4 ways: each owes $25)
+    h11_1 = CryptographicLedger.compute_hash(g11['id'], 'ADD_EXPENSE', 1700001200, {
+        'title': 'Hotel', 'originalAmount': 100.0, 'originalCurrency': 'USD', 'payer': 'Alice'
+    }, prev_hash, src11)
+    g11['events'].append({
+        'id': h11_1, 'hash': h11_1, 'type': 'ADD_EXPENSE', 'ts': 1700001200, 'source': src11,
+        'data': {'title': 'Hotel', 'originalAmount': 100.0, 'originalCurrency': 'USD', 'payer': 'Alice'}
+    })
+    prev_hash = h11_1
+
+    # Bob pays $40 (split 4 ways: each owes $10)
+    h11_2 = CryptographicLedger.compute_hash(g11['id'], 'ADD_EXPENSE', 1700001300, {
+        'title': 'Groceries', 'originalAmount': 40.0, 'originalCurrency': 'USD', 'payer': 'Bob'
+    }, prev_hash, src11)
+    g11['events'].append({
+        'id': h11_2, 'hash': h11_2, 'type': 'ADD_EXPENSE', 'ts': 1700001300, 'source': src11,
+        'data': {'title': 'Groceries', 'originalAmount': 40.0, 'originalCurrency': 'USD', 'payer': 'Bob'}
+    })
+    prev_hash = h11_2
+
+    # Charlie pays $20 (split 4 ways: each owes $5)
+    h11_3 = CryptographicLedger.compute_hash(g11['id'], 'ADD_EXPENSE', 1700001400, {
+        'title': 'Taxi', 'originalAmount': 20.0, 'originalCurrency': 'USD', 'payer': 'Charlie'
+    }, prev_hash, src11)
+    g11['events'].append({
+        'id': h11_3, 'hash': h11_3, 'type': 'ADD_EXPENSE', 'ts': 1700001400, 'source': src11,
+        'data': {'title': 'Taxi', 'originalAmount': 20.0, 'originalCurrency': 'USD', 'payer': 'Charlie'}
+    })
+
+    b11 = SettlementEngine.calculate_balances(g11, rates)
+    s11 = SettlementEngine.calculate_settlements(b11)
+    sum_b11 = round(sum(b11.values()), 2)
+    print(f"  Balances: {b11}")
+    print(f"  Settlements: {s11}")
+    # Alice: paid 100, owes 40 (25+10+5) → net +60
+    # Bob: paid 40, owes 40 → net 0
+    # Charlie: paid 20, owes 40 → net -20
+    # Diana: paid 0, owes 40 → net -40
+    assert b11['Alice'] == 60.0, f"Expected Alice = 60.0, got {b11['Alice']}"
+    assert b11['Bob'] == 0.0, f"Expected Bob = 0.0, got {b11['Bob']}"
+    assert b11['Charlie'] == -20.0, f"Expected Charlie = -20.0, got {b11['Charlie']}"
+    assert b11['Diana'] == -40.0, f"Expected Diana = -40.0, got {b11['Diana']}"
+    assert sum_b11 == 0.0, f"Net-zero violated! Sum = {sum_b11}"
+    # Settlement should be: Diana → Alice $40, Charlie → Alice $20 (2 transfers, not 3)
+    assert len(s11) == 2, f"Expected 2 settlements (minimized), got {len(s11)}"
+    total_settled = sum(s['amount'] for s in s11)
+    assert total_settled == 60.0, f"Expected total settled = 60.0, got {total_settled}"
+    print("  ✓ PASS: Multiple payers balanced correctly; settlement minimized to 2 transfers.")
+
+    # -------------------------------------------------------------
+    # TEST 12: Settle-Up (All Expenses Voided → Zero Balances)
+    # -------------------------------------------------------------
+    print("\n[TEST 12] Settle-Up Full Void Verification")
+    g12 = {
+        'id': 'grp_test12',
+        'currency': 'EUR',
+        'members': ['Max', 'Lena'],
+        'events': []
+    }
+    src12 = 'dev_test12'
+    prev_hash12 = ''
+    # Max pays €30
+    h12_1 = CryptographicLedger.compute_hash(g12['id'], 'ADD_EXPENSE', 1700001500, {
+        'title': 'Lunch', 'originalAmount': 30.0, 'originalCurrency': 'EUR', 'payer': 'Max'
+    }, prev_hash12, src12)
+    g12['events'].append({
+        'id': h12_1, 'hash': h12_1, 'type': 'ADD_EXPENSE', 'ts': 1700001500, 'source': src12,
+        'data': {'title': 'Lunch', 'originalAmount': 30.0, 'originalCurrency': 'EUR', 'payer': 'Max'}
+    })
+    prev_hash12 = h12_1
+
+    # Lena pays €50
+    h12_2 = CryptographicLedger.compute_hash(g12['id'], 'ADD_EXPENSE', 1700001600, {
+        'title': 'Tickets', 'originalAmount': 50.0, 'originalCurrency': 'EUR', 'payer': 'Lena'
+    }, prev_hash12, src12)
+    g12['events'].append({
+        'id': h12_2, 'hash': h12_2, 'type': 'ADD_EXPENSE', 'ts': 1700001600, 'source': src12,
+        'data': {'title': 'Tickets', 'originalAmount': 50.0, 'originalCurrency': 'EUR', 'payer': 'Lena'}
+    })
+    prev_hash12 = h12_2
+
+    # Verify pre-settle balances
+    b12_pre = SettlementEngine.calculate_balances(g12, rates)
+    assert b12_pre['Max'] != 0.0 or b12_pre['Lena'] != 0.0, "Pre-settle should have non-zero balances"
+
+    # Settle up: void both expenses
+    h12_s1 = CryptographicLedger.compute_hash(g12['id'], 'STORNO_EXPENSE', 1700001700, {
+        'expenseId': h12_1
+    }, prev_hash12, src12)
+    g12['events'].append({
+        'id': h12_s1, 'hash': h12_s1, 'type': 'STORNO_EXPENSE', 'ts': 1700001700, 'source': src12,
+        'data': {'expenseId': h12_1}
+    })
+    prev_hash12 = h12_s1
+
+    h12_s2 = CryptographicLedger.compute_hash(g12['id'], 'STORNO_EXPENSE', 1700001800, {
+        'expenseId': h12_2
+    }, prev_hash12, src12)
+    g12['events'].append({
+        'id': h12_s2, 'hash': h12_s2, 'type': 'STORNO_EXPENSE', 'ts': 1700001800, 'source': src12,
+        'data': {'expenseId': h12_2}
+    })
+
+    b12_post = SettlementEngine.calculate_balances(g12, rates)
+    s12_post = SettlementEngine.calculate_settlements(b12_post)
+    print(f"  Pre-settle balances: {b12_pre}")
+    print(f"  Post-settle balances: {b12_post}")
+    assert b12_post['Max'] == 0.0, f"Expected Max = 0.0 after settle, got {b12_post['Max']}"
+    assert b12_post['Lena'] == 0.0, f"Expected Lena = 0.0 after settle, got {b12_post['Lena']}"
+    assert len(s12_post) == 0, f"Expected 0 settlements after settle, got {len(s12_post)}"
+    print("  ✓ PASS: Settling up (voiding all expenses) correctly zeroes all balances.")
+
     print("\n" + "=" * 70)
     print("      ALL MATHEMATICAL & IMMUTABILITY TESTS PASSED!      ")
     print("=" * 70)

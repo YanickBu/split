@@ -247,6 +247,16 @@ const App = {
   },
   
   setupListeners() {
+    // Centralized event delegation for data-action attributes (XSS-safe: no user data in inline JS)
+    document.getElementById('app').addEventListener('click', (e) => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.dataset.action;
+      if (action === 'openGroup') this.openGroup(target.dataset.id);
+      else if (action === 'removeMember') this.removeMember(target.dataset.member);
+      else if (action === 'stornoExpense') this.stornoExpense(target.dataset.expenseId);
+    });
+
     // New Group Form
     document.getElementById('newGroupForm').addEventListener('submit', async (e) => {
       e.preventDefault();

@@ -30,7 +30,7 @@ const Components = {
       ${list.map(g => {
         const pendingCount = (g.pendingDeltas || []).length;
         return `
-        <div class="card clickable group-item" onclick="App.openGroup('${this._esc(g.id)}')">
+        <div class="card clickable group-item" data-action="openGroup" data-id="${this._esc(g.id)}">
           <div class="group-info">
             <h3>
               ${this._esc(g.name)}
@@ -67,7 +67,7 @@ const Components = {
           ${group.members.map(m => `
             <div class="member-chip">
               👤 ${this._esc(m)}
-              <span class="member-remove" onclick="App.removeMember('${this._esc(m)}')">×</span>
+              <span class="member-remove" data-action="removeMember" data-member="${this._esc(m)}">×</span>
             </div>
           `).join('')}
           <button class="btn-icon" onclick="App.showAddMember()">+ Add</button>
@@ -128,7 +128,7 @@ const Components = {
                     `}
                   </div>
                   ${!isStorno ? `
-                    <button class="expense-void-btn" title="Void expense" onclick="App.stornoExpense('${this._esc(evtId)}')">✕</button>
+                    <button class="expense-void-btn" title="Void expense" data-action="stornoExpense" data-expense-id="${this._esc(evtId)}">✕</button>
                   ` : ''}
                 </div>
               </div>

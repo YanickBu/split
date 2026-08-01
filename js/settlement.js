@@ -25,9 +25,6 @@ const Settlement = {
         
         if (amount <= 0 || !payer) return;
 
-        if (balances[payer] === undefined) balances[payer] = 0;
-        balances[payer] += amount;
-        
         // Split among designated subgroup members (or all active members if unspecified)
         let splitMembers = (evt.data.splitMembers && Array.isArray(evt.data.splitMembers) && evt.data.splitMembers.length > 0)
           ? evt.data.splitMembers.filter(m => group.members.includes(m))
@@ -38,17 +35,16 @@ const Settlement = {
         }
 
         const numMembers = splitMembers.length;
-        const baseShareCents = Math.floor((amount * 100) / numMembers);
-        let remainderCents = Math.round((amount * 100) - (baseShareCents * numMembers));
+        // Round up each member's share to the nearest cent
+        const shareCents = Math.ceil((amount * 100) / numMembers);
+        const totalCreditedAmount = (shareCents * numMembers) / 100;
+
+        if (balances[payer] === undefined) balances[payer] = 0;
+        balances[payer] += totalCreditedAmount;
 
         splitMembers.forEach((m) => {
           if (balances[m] === undefined) balances[m] = 0;
-          let memberShareCents = baseShareCents;
-          if (remainderCents > 0) {
-            memberShareCents += 1;
-            remainderCents -= 1;
-          }
-          balances[m] -= (memberShareCents / 100);
+          balances[m] -= (shareCents / 100);
         });
       }
     });

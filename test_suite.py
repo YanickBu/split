@@ -74,10 +74,6 @@ class SettlementEngine:
                 if converted_amt is None:
                     continue # Skip pending un-rate-resolved expenses
 
-                if payer not in balances:
-                    balances[payer] = 0.0
-                balances[payer] += converted_amt
-
                 split_members = evt['data'].get('splitMembers')
                 if not split_members or not isinstance(split_members, list) or len(split_members) == 0:
                     split_members = members if len(members) > 0 else [payer]
@@ -88,17 +84,18 @@ class SettlementEngine:
                     split_members = members if len(members) > 0 else [payer]
 
                 num_members = len(split_members)
-                base_share_cents = int((converted_amt * 100) // num_members)
-                remainder_cents = int(round((converted_amt * 100) - (base_share_cents * num_members)))
+                # Round up each member's share to the nearest cent
+                share_cents = math.ceil((converted_amt * 100) / num_members)
+                total_credited = (share_cents * num_members) / 100.0
+
+                if payer not in balances:
+                    balances[payer] = 0.0
+                balances[payer] += total_credited
 
                 for m in split_members:
                     if m not in balances:
                         balances[m] = 0.0
-                    member_cents = base_share_cents
-                    if remainder_cents > 0:
-                        member_cents += 1
-                        remainder_cents -= 1
-                    balances[m] -= (member_cents / 100.0)
+                    balances[m] -= (share_cents / 100.0)
 
         # Round balances to 2 decimal places
         return {m: round(bal, 2) for m, bal in balances.items()}
@@ -349,8 +346,8 @@ def run_tests():
 
     b7 = SettlementEngine.calculate_balances(g7, hist_rates)
     print(f"  Balances (USD with historical rate): {b7}")
-    assert b7['Alice'] == 58.82, f"Expected Alice = 58.82, got {b7['Alice']}"
-    assert b7['Bob'] == -58.82, f"Expected Bob = -58.82, got {b7['Bob']}"
+    assert b7['Alice'] == 58.83, f"Expected Alice = 58.83, got {b7['Alice']}"
+    assert b7['Bob'] == -58.83, f"Expected Bob = -58.83, got {b7['Bob']}"
     print("  ✓ PASS: Historical exchange rate conversion for past date verified accurately.")
 
     # -------------------------------------------------------------
@@ -375,10 +372,10 @@ def run_tests():
     b8 = SettlementEngine.calculate_balances(g8, rates)
     sum_b8 = round(sum(b8.values()), 2)
     print(f"  Balances: {b8}")
-    # $10 / 3 = $3.333... → first member gets $3.34, others get $3.33
-    assert b8['X'] == 6.66, f"Expected X = 6.66, got {b8['X']}"
-    assert b8['Y'] == -3.34 or b8['Y'] == -3.33, f"Expected Y ∈ {{-3.34, -3.33}}, got {b8['Y']}"
-    assert b8['Z'] == -3.33 or b8['Z'] == -3.32, f"Expected Z ∈ {{-3.33, -3.32}}, got {b8['Z']}"
+    # $10 / 3 = 3.3333333333333335 -> ceil is 3.34
+    assert b8['X'] == 6.68, f"Expected X = 6.68, got {b8['X']}"
+    assert b8['Y'] == -3.34, f"Expected Y = -3.34, got {b8['Y']}"
+    assert b8['Z'] == -3.34, f"Expected Z = -3.34, got {b8['Z']}"
     assert sum_b8 == 0.0, f"Net-zero violated! Sum = {sum_b8}"
     print("  ✓ PASS: Penny remainder distributed correctly; net-zero maintained.")
 

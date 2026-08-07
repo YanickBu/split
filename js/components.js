@@ -137,8 +137,10 @@ const Components = {
         `}
       </div>
 
-      <footer class="app-footer">
-        <a href="#" class="subtle-link" onclick="App.exportCSV(event)">csv</a>
+      <footer class="app-footer" style="display:flex; justify-content:center; gap:8px;">
+        <a href="#" class="subtle-link" onclick="App.exportCSV(event)">export csv</a>
+        <span style="color:var(--text-dim); opacity:0.3; font-size:11px;">•</span>
+        <a href="#" class="subtle-link" onclick="App.importCSV(event)">import csv</a>
       </footer>
     `;
     

@@ -611,6 +611,145 @@ const App = {
     link.click();
     document.body.removeChild(link);
   },
+
+  importCSV(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!this.currentGroupId) return;
+    const group = State.getGroup(this.currentGroupId);
+    if (!group) return;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const text = reader.result;
+        const lines = text.split(/\r?\n/);
+        if (lines.length < 2) {
+          alert("CSV is empty or invalid.");
+          return;
+        }
+
+        // Helper to parse CSV line respecting quotes
+        const parseCSVLine = (line) => {
+          const result = [];
+          let current = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+              if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i++;
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (char === ',' && !inQuotes) {
+              result.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          result.push(current.trim());
+          return result;
+        };
+
+        const headers = parseCSVLine(lines[0]);
+        // Map headers to indices
+        const hMap = {};
+        headers.forEach((h, i) => {
+          hMap[h.trim().toLowerCase()] = i;
+        });
+
+        // Verify required columns exist
+        const requiredHeaders = ["date", "title", "payer", "original amount", "original currency"];
+        const missing = requiredHeaders.filter(h => hMap[h] === undefined);
+        if (missing.length > 0) {
+          alert(`Missing columns in CSV: ${missing.join(', ')}.\nRequired columns are: ${requiredHeaders.join(', ')}`);
+          return;
+        }
+
+        let importedCount = 0;
+        let errorsCount = 0;
+
+        // Ensure we load current exchange rates first
+        await Currency.fetchRates();
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (!line.trim()) continue;
+
+          const row = parseCSVLine(line);
+          const date = row[hMap["date"]];
+          const title = row[hMap["title"]];
+          const payer = row[hMap["payer"]];
+          const origAmtStr = row[hMap["original amount"]];
+          const origCurr = row[hMap["original currency"]] || group.currency;
+          const splitMembersStr = row[hMap["split members"]] || '';
+
+          const amount = parseFloat(origAmtStr.replace(/,/g, '.'));
+          if (!date || !title || !payer || isNaN(amount) || amount <= 0) {
+            errorsCount++;
+            continue;
+          }
+
+          // 1. Auto-create payer if they don't exist
+          if (!group.members.includes(payer)) {
+            const evt = State.appendEvent(this.currentGroupId, 'ADD_MEMBER', { name: payer });
+            await this.publishAndSync(this.currentGroupId, evt);
+          }
+
+          // 2. Parse split members
+          let splitMembers = group.members;
+          if (splitMembersStr) {
+            splitMembers = splitMembersStr.split(',')
+              .map(m => m.trim().replace(/^"|"$/g, ''))
+              .filter(m => m.length > 0);
+            
+            // Auto-create any split members that don't exist
+            for (const member of splitMembers) {
+              if (!group.members.includes(member)) {
+                const evt = State.appendEvent(this.currentGroupId, 'ADD_MEMBER', { name: member });
+                await this.publishAndSync(this.currentGroupId, evt);
+              }
+            }
+          }
+
+          // 3. Convert Currency using historical rate
+          const conv = await Currency.convertWithDate(amount, origCurr, group.currency, date);
+
+          // 4. Create and publish the expense event
+          const evt = State.appendEvent(this.currentGroupId, 'ADD_EXPENSE', {
+            title,
+            originalAmount: amount,
+            originalCurrency: origCurr,
+            groupAmount: conv.amount,
+            isPendingRate: conv.isPending,
+            payer,
+            expenseDate: date,
+            splitMembers,
+            rateSnapshot: Currency.rates
+          });
+
+          await this.publishAndSync(this.currentGroupId, evt);
+          importedCount++;
+        }
+
+        this.render();
+        alert(`Import completed!\nSuccessfully imported: ${importedCount} expenses.\nSkipped/failed: ${errorsCount} rows.`);
+      };
+
+      reader.readAsText(file);
+    };
+
+    input.click();
+  },
   
   async render() {
     const appEl = document.getElementById('app');

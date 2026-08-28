@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Split V3 (P2P MVP)</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="header-content">
+        <h1>Split V3 <span class="badge">P2P MVP</span></h1>
+        <div id="connectionStatus" class="status offline">🔴 Offline</div>
+      </div>
+    </header>
+
+    <main>
+      <div class="card">
+        <h2>Add Expense</h2>
+        <form id="expenseForm">
+          <input type="text" id="expenseTitle" placeholder="What was it for?" required>
+          <input type="number" id="expenseAmount" placeholder="Amount ($)" step="0.01" required>
+          <input type="text" id="expensePayer" placeholder="Who paid?" required>
+          <button type="submit" class="btn-primary">Add Expense</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="section-header">
+          <h2>Ledger</h2>
+          <span id="expenseCount">0 expenses</span>
+        </div>
+        <div id="expensesList" class="expenses-list">
+          <!-- Expenses will be rendered here -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

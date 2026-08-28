@@ -215,6 +215,53 @@ const App = {
               this.render();
             }
           }
+        } else {
+          // We found events but couldn't reconstruct the group (missing INIT/snapshot)
+          if (this.currentGroupId === groupId) {
+            const appEl = document.getElementById('app');
+            if (appEl) {
+              appEl.innerHTML = `
+                <header>
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <button onclick="App.goHome()" class="btn-icon">←</button>
+                    <h1>Group Error</h1>
+                  </div>
+                </header>
+                <main>
+                  <div class="empty-state" style="padding: 40px 20px;">
+                    <div style="font-size: 32px; margin-bottom: 12px;">⚠️</div>
+                    <div style="font-size: 15px; color: var(--text); margin-bottom: 6px;">Corrupted Cloud Ledger</div>
+                    <div style="font-size: 13px; margin-bottom: 20px;">We found cloud data for this group, but the initial creation event is missing. This usually happens if the group was created by an older version of the app that failed to sync correctly.</div>
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                      <button onclick="event.preventDefault(); App.importCSV(event);" class="btn-secondary">📥 Recover from CSV</button>
+                      <button onclick="event.preventDefault(); if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>r.forEach(reg=>reg.unregister()))}; caches.keys().then(k=>Promise.all(k.map(key=>caches.delete(key)))).then(()=>window.location.reload());" class="btn-primary" style="background:var(--danger)">🔄 Force Update App</button>
+                    </div>
+                  </div>
+                </main>`;
+            }
+          }
+        } else {
+          // We found events but couldn't reconstruct the group (missing INIT/snapshot)
+          if (this.currentGroupId === groupId) {
+            const appEl = document.getElementById('app');
+            if (appEl) {
+              appEl.innerHTML = `
+                <header>
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <button onclick="App.goHome()" class="btn-icon">←</button>
+                    <h1>Group Error</h1>
+                  </div>
+                </header>
+                <main>
+                  <div class="empty-state" style="padding: 40px 20px;">
+                    <div style="font-size: 32px; margin-bottom: 12px;">⚠️</div>
+                    <div style="font-size: 15px; color: var(--text); margin-bottom: 6px;">Corrupted Cloud Ledger</div>
+                    <div style="font-size: 13px; margin-bottom: 20px;">We found cloud data for this group, but the initial creation event is missing. This usually happens if the group was created by an older version of the app that failed to sync correctly.</div>
+                    <button onclick="event.preventDefault(); App.importCSV(event);" class="btn-secondary">📥 Recover from CSV</button>
+                  </div>
+                </main>`;
+            }
+          }
         }
       } else {
         // No cloud data found — update UI if group still doesn't exist locally

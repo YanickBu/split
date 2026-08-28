@@ -103,7 +103,13 @@ const App = {
             }
           }
         }
-        await JSONBin.sync(group);
+        
+        // If ntfy rate limited us, but jsonbin successfully saved the full snapshot, we can clear pending deltas
+        const binSynced = await JSONBin.sync(group);
+        if (binSynced && State.getGroup(group.id).pendingDeltas.length > 0) {
+          State.clearAllPendingDeltas(group.id);
+          updatedPending = true;
+        }
       }
     }
 
@@ -245,6 +251,12 @@ const App = {
     if (!this.currentGroupId || !evt) return;
     const group = State.getGroup(this.currentGroupId);
     if (!group) return;
+
+    // Handle ping sync (used when snapshot was too large for ntfy)
+    if (evt.type === 'PING_SYNC') {
+      this.syncGroupFromCloud(this.currentGroupId);
+      return;
+    }
 
     // Handle snapshot sync wrapper
     if (evt.type === 'SNAPSHOT_SYNC' && evt.groupState && evt.groupState.events) {

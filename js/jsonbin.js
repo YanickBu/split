@@ -33,6 +33,14 @@ const JSONBin = {
         body: JSON.stringify(payload)
       });
       ntfyOk = res.ok;
+      if (!ntfyOk && res.status === 413) {
+        // Payload too large! Send a lightweight ping so live clients know to fetch from jsonbin
+        fetch(`https://ntfy.sh/${cloudId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'PING_SYNC', groupId: group.id, timestamp: Date.now() })
+        }).catch(() => {});
+      }
     } catch (err) {
       console.warn('[JSONBin] ntfy.sh sync failed:', err);
     }

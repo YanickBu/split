@@ -1,4 +1,4 @@
-const CACHE_NAME = 'split-pwa-v3.0';
+const CACHE_NAME = 'split-v13';
 const ASSETS = [
   './',
   './index.html',

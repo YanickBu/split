@@ -615,14 +615,31 @@ const App = {
   importCSV(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (!this.currentGroupId) return;
-    const group = State.getGroup(this.currentGroupId);
-    if (!group) return;
-
+    let group = State.getGroup(this.currentGroupId);
+    
+    // Setup file input synchronously to prevent browser popup blockers
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.csv';
 
     input.onchange = async () => {
+      // If the group is missing, create a placeholder so we can recover it
+      if (!group) {
+        State.data.groups[this.currentGroupId] = {
+          id: this.currentGroupId,
+          name: 'Recovered Group',
+          currency: 'USD',
+          members: ['Me'],
+          events: [],
+          pendingDeltas: []
+        };
+        group = State.getGroup(this.currentGroupId);
+        State.appendEvent(this.currentGroupId, 'INIT', {
+          name: 'Recovered Group',
+          currency: 'USD',
+          creator: 'RecoveryBot'
+        });
+      }
       const file = input.files[0];
       if (!file) return;
 
@@ -780,7 +797,14 @@ const App = {
               </div>
             </main>`;
         } else {
-          appEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-dim);">Connecting to group cloud ledger...</div>`;
+          appEl.innerHTML = `
+            <div style="text-align:center; padding:40px; color:var(--text-dim);">
+              <p style="margin-bottom: 20px;">Connecting to group cloud ledger...</p>
+              <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px;">
+                <button onclick="event.preventDefault(); App.importCSV(event);" class="btn-secondary">Recover from CSV</button>
+              </div>
+            </div>
+          `;
         }
         return;
       }

@@ -1,120 +1,291 @@
-import * as Y from 'https://esm.sh/yjs@13.6.14';
-import { WebrtcProvider } from 'https://esm.sh/y-webrtc@13.2.1';
-import { IndexeddbPersistence } from 'https://esm.sh/y-indexeddb@9.0.12';
+import Store from './store.js';
 
-// State
-let expensesList = null;
+function _escHTML(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
-async function init() {
-  console.log("Initializing Yjs...");
-
-  // 1. Create a Yjs Document
-  const ydoc = new Y.Doc();
+const App = {
+  currentGroupId: null,
+  lastExpenseCurrency: null,
+  lastExpensePayer: null,
   
-  // 2. Persist locally to IndexedDB so it works completely offline
-  // 'split-v3-local' is the name of the database
-  const persistence = new IndexeddbPersistence('split-v3-local', ydoc);
-  
-  persistence.on('synced', () => {
-    console.log("Loaded local data from IndexedDB.");
-    renderExpenses();
-  });
+  async init() {
+    this.registerServiceWorker();
+    if (typeof Currency !== 'undefined') await Currency.fetchRates();
+    this.setupRoutes();
+    this.setupListeners();
+    this.handleHashChange();
+  },
 
-  // 3. Connect to WebRTC for True P2P Sync
-  // 'split-v3-room-xyz' is the "room name" peers will use to find each other
-  const provider = new WebrtcProvider('split-v3-room-xyz', ydoc, {
-    // We can use standard public signaling servers or host our own later
-    signaling: [
-      'wss://y-webrtc-signaling-eu.herokuapp.com',
-      'wss://y-webrtc-signaling-us.herokuapp.com',
-      'wss://signaling.yjs.dev'
-    ]
-  });
-  
-  provider.on('status', event => {
-    const statusEl = document.getElementById('connectionStatus');
-    if (event.status === 'connected') {
-      statusEl.className = 'status online';
-      statusEl.innerText = '🟢 Connected (P2P)';
+  registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW registration skipped:', err));
+    }
+  },
+
+  setupRoutes() {
+    window.addEventListener('hashchange', () => this.handleHashChange());
+  },
+
+  handleHashChange() {
+    const hash = window.location.hash.substring(1);
+    
+    if (hash.startsWith('group=')) {
+      const params = new URLSearchParams(hash);
+      const groupId = params.get('group');
+      this.currentGroupId = groupId;
+      
+      // Initialize Yjs store for this specific group room
+      Store.init(groupId, () => this.render());
+      
+      // The render will happen automatically once Store syncs
+      this.render();
     } else {
-      statusEl.className = 'status offline';
-      statusEl.innerText = '🔴 Offline';
+      this.currentGroupId = null;
+      this.render();
     }
-  });
+  },
 
-  provider.on('peers', event => {
-    const peers = event.webrtcPeers.length;
-    const statusEl = document.getElementById('connectionStatus');
-    if (provider.connected) {
-      statusEl.innerText = `🟢 ${peers} Peer${peers !== 1 ? 's' : ''} Connected`;
+  setupListeners() {
+    document.getElementById('newGroupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('groupName').value;
+      const currency = document.getElementById('groupCurrency').value;
+      const creator = document.getElementById('creatorName').value;
+      
+      const groupId = Store.createGroup(name, currency, creator);
+      window.location.hash = `group=${groupId}`;
+      
+      document.getElementById('newGroupModal').close();
+      e.target.reset();
+    });
+
+    document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('memberName').value;
+      Store.appendEvent(this.currentGroupId, 'ADD_MEMBER', { name });
+      document.getElementById('addMemberModal').close();
+      e.target.reset();
+    });
+
+    document.getElementById('addExpenseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('expenseTitle').value;
+      const amount = parseFloat(document.getElementById('expenseAmount').value);
+      const currency = document.getElementById('expenseCurrency').value;
+      const payer = document.getElementById('expensePayer').value;
+      const expenseDate = document.getElementById('expenseDate').value;
+      
+      const group = Store.getGroup();
+      if (!group) return;
+
+      const splitMembers = Array.from(document.querySelectorAll('.split-member-checkbox:checked')).map(cb => cb.value);
+      if (splitMembers.length === 0) {
+        alert("Select at least one person to split with.");
+        return;
+      }
+      
+      this.lastExpenseCurrency = currency;
+      this.lastExpensePayer = payer;
+      
+      try {
+        localStorage.setItem('split_last_expense_currency_' + this.currentGroupId, currency);
+        localStorage.setItem('split_last_expense_payer_' + this.currentGroupId, payer);
+      } catch (err) {}
+      
+      let convAmount = amount;
+      let isPending = false;
+      let rateSnap = {};
+
+      if (typeof Currency !== 'undefined') {
+        const conv = await Currency.convertWithDate(amount, currency, group.currency, expenseDate);
+        convAmount = conv.amount;
+        isPending = conv.isPending;
+        rateSnap = Currency.rates;
+      }
+      
+      Store.appendEvent(this.currentGroupId, 'ADD_EXPENSE', {
+        title,
+        originalAmount: amount,
+        originalCurrency: currency,
+        groupAmount: convAmount,
+        isPendingRate: isPending,
+        payer,
+        expenseDate,
+        splitMembers,
+        rateSnapshot: rateSnap
+      });
+
+      document.getElementById('addExpenseModal').close();
+      e.target.reset();
+    });
+  },
+
+  openGroup(id) {
+    window.location.hash = `group=${id}`;
+  },
+  
+  goHome() {
+    window.location.hash = '';
+  },
+
+  async render() {
+    const appEl = document.getElementById('app');
+    
+    if (this.currentGroupId) {
+      const group = Store.getGroup();
+      
+      if (!group || !group.name) {
+        // Still loading from Yjs
+        appEl.innerHTML = `
+          <header>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <button onclick="App.goHome()" class="btn-icon">←</button>
+              <h1>Connecting...</h1>
+            </div>
+          </header>
+          <main>
+            <div style="text-align:center; padding: 40px; color: var(--text-dim)">
+              Connecting to P2P Swarm...
+            </div>
+          </main>`;
+        return;
+      }
+
+      appEl.innerHTML = Components.renderDashboard(group);
+      
+      // Update header
+      document.getElementById('groupTitleDisplay').innerText = group.name;
+      
+      // Setup expense form defaults
+      const lastCur = localStorage.getItem('split_last_expense_currency_' + group.id) || group.currency;
+      const curSelect = document.getElementById('expenseCurrency');
+      if (curSelect) curSelect.value = lastCur;
+      
+      const lastPayer = localStorage.getItem('split_last_expense_payer_' + group.id);
+      const payerSelect = document.getElementById('expensePayer');
+      if (payerSelect && lastPayer) payerSelect.value = lastPayer;
+
+      if (typeof CurrencyPicker !== 'undefined') {
+        CurrencyPicker.init('expenseCurrency');
+      }
+    } else {
+      appEl.innerHTML = Components.renderHome({});
+      if (typeof CurrencyPicker !== 'undefined') {
+        CurrencyPicker.init('groupCurrency');
+      }
     }
-  });
+  },
 
-  // 4. Define our Shared Data Structure
-  expensesList = ydoc.getArray('expenses');
+  showAddMemberModal() {
+    document.getElementById('addMemberModal').showModal();
+  },
   
-  // Re-render the UI whenever the data changes (even from another peer!)
-  expensesList.observe(() => {
-    renderExpenses();
-  });
+  showAddExpenseModal() {
+    const group = Store.getGroup();
+    const container = document.getElementById('splitMembersContainer');
+    if (container && group) {
+      container.innerHTML = group.members.map(m => `
+        <label class="member-checkbox">
+          <input type="checkbox" class="split-member-checkbox" value="${_escHTML(m)}" checked>
+          <span>${_escHTML(m)}</span>
+        </label>
+      `).join('');
+    }
+    
+    const dateInput = document.getElementById('expenseDate');
+    if (dateInput) {
+      dateInput.value = new Date().toISOString().split('T')[0];
+    }
+    
+    document.getElementById('addExpenseModal').showModal();
+  },
 
-  // 5. Setup Form Listener
-  document.getElementById('expenseForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    const title = document.getElementById('expenseTitle').value;
-    const amount = parseFloat(document.getElementById('expenseAmount').value);
-    const payer = document.getElementById('expensePayer').value;
-    
-    // Add to Yjs Array (this automatically syncs to peers & saves to IndexedDB)
-    expensesList.push([{
-      id: Date.now().toString(),
-      title,
-      amount,
-      payer,
-      timestamp: Date.now()
-    }]);
-    
-    e.target.reset();
-  });
-}
+  voidExpense(hash) {
+    if (confirm("Are you sure you want to void this expense? This action will be recorded in the ledger.")) {
+      Store.appendEvent(this.currentGroupId, 'VOID_EXPENSE', { targetHash: hash });
+    }
+  },
 
-function renderExpenses() {
-  if (!expensesList) return;
-  
-  const container = document.getElementById('expensesList');
-  const countEl = document.getElementById('expenseCount');
-  
-  // Y.Array gives us standard array methods
-  const expenses = expensesList.toArray();
-  
-  // Sort newest first
-  expenses.sort((a, b) => b.timestamp - a.timestamp);
-  
-  countEl.innerText = `${expenses.length} expense${expenses.length !== 1 ? 's' : ''}`;
-  
-  if (expenses.length === 0) {
-    container.innerHTML = `<div class="empty-state">No expenses yet. Add one above!</div>`;
-    return;
+  showShareModal() {
+    const url = window.location.href;
+    const svg = typeof QRCode !== 'undefined' ? QRCode.generateSVG(url, 220) : '';
+    const container = document.getElementById('qrCodeContainer');
+    if (container) container.innerHTML = svg;
+    const modal = document.getElementById('shareModal');
+    if (modal) modal.showModal();
+  },
+
+  async shareUrl() {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Split V3', url: url });
+      } catch (err) {}
+    } else {
+      navigator.clipboard.writeText(url);
+      alert("Link copied to clipboard!");
+    }
+  },
+
+  importCSV(e) {
+    document.getElementById('csvInput').click();
+  },
+
+  handleCSVUpload(e) {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target.result;
+      const rows = text.split('\n');
+      let importedCount = 0;
+      
+      const group = Store.getGroup();
+      if (!group) return;
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i].trim();
+        if (!row) continue;
+        const cols = row.split(',').map(c => c.replace(/^"|"$/g, '').trim());
+        if (cols.length >= 6) {
+          const date = cols[0];
+          const title = cols[1];
+          const payer = cols[2];
+          const amount = parseFloat(cols[3]);
+          const cur = cols[4];
+          const members = cols[5].split(';').map(m => m.trim());
+          
+          if (!payer || !amount || members.length === 0) continue;
+          
+          if (!group.members.includes(payer)) Store.appendEvent(group.id, 'ADD_MEMBER', { name: payer });
+          members.forEach(m => {
+            if (!group.members.includes(m)) Store.appendEvent(group.id, 'ADD_MEMBER', { name: m });
+          });
+          
+          let convAmount = amount;
+          if (typeof Currency !== 'undefined') {
+            const conv = await Currency.convertWithDate(amount, cur, group.currency, date);
+            convAmount = conv.amount;
+          }
+
+          Store.appendEvent(group.id, 'ADD_EXPENSE', {
+            title, originalAmount: amount, originalCurrency: cur,
+            groupAmount: convAmount, isPendingRate: false,
+            payer, expenseDate: date, splitMembers: members,
+            rateSnapshot: {}
+          });
+          importedCount++;
+        }
+      }
+      alert(`Successfully imported ${importedCount} expenses!`);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   }
-  
-  container.innerHTML = expenses.map(exp => `
-    <div class="expense-item">
-      <div class="expense-info">
-        <span class="expense-title">${escapeHTML(exp.title)}</span>
-        <span class="expense-meta">Paid by ${escapeHTML(exp.payer)}</span>
-      </div>
-      <span class="expense-amount">$${exp.amount.toFixed(2)}</span>
-    </div>
-  `).join('');
-}
+};
 
-function escapeHTML(str) {
-  return String(str).replace(/[&<>"']/g, function(match) {
-    const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
-    return map[match];
-  });
-}
-
-// Start
-init();
+window.App = App;
+window.addEventListener('DOMContentLoaded', () => App.init());
+export default App;

@@ -348,5 +348,10 @@ window.Export = Export;
 window.CurrencyPicker = CurrencyPicker;
 window.Components = Components;
 
-window.addEventListener('DOMContentLoaded', () => App.init());
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => App.init());
+} else {
+  App.init();
+}
+
 export default App;

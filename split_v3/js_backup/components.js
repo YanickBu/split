@@ -1,6 +1,3 @@
-import Settlement from './settlement.js';
-import Currency from './currency.js';
-
 const Components = {
   _esc(str) {
     if (!str) return '';
@@ -152,5 +149,3 @@ const Components = {
     return html;
   }
 };
-
-export default Components;

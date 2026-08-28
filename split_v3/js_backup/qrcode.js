@@ -484,5 +484,3 @@ const QRCode = (function() {
     generateSVG: generateSVG
   };
 })();
-
-export default QRCode;

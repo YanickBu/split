@@ -1,10 +1,4 @@
 import Store from './store.js';
-import Currency from './currency.js';
-import CurrencyPicker from './currencyPicker.js';
-import Components from './components.js';
-import QRCode from './qrcode.js';
-import Export from './export.js';
-
 
 function _escHTML(str) {
   if (!str) return '';
@@ -292,11 +286,6 @@ const App = {
   }
 };
 
-
 window.App = App;
-window.Export = Export;
-window.CurrencyPicker = CurrencyPicker;
-window.Components = Components;
-
 window.addEventListener('DOMContentLoaded', () => App.init());
 export default App;

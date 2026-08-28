@@ -336,5 +336,3 @@ const Currency = {
     return c ? c.symbol : code;
   }
 };
-
-export default Currency;

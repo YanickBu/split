@@ -1,5 +1,3 @@
-import Currency from './currency.js';
-
 const CSVExport = {
   exportCSV(app, e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -209,5 +207,3 @@ const CSVExport = {
     input.click();
   }
 };
-
-export default Export;

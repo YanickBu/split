@@ -1,5 +1,3 @@
-import Currency from './currency.js';
-
 const CurrencyPicker = {
   targetInputId: null,
   targetBtnId: null,
@@ -129,5 +127,3 @@ const CurrencyPicker = {
 };
 
 document.addEventListener('DOMContentLoaded', () => CurrencyPicker.init());
-
-export default CurrencyPicker;

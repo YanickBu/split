@@ -621,6 +621,8 @@ const App = {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.csv';
+    input.style.display = 'none';
+    document.body.appendChild(input);
 
     input.onchange = async () => {
       // If the group is missing, create a placeholder so we can recover it
@@ -646,38 +648,40 @@ const App = {
       const reader = new FileReader();
       reader.onload = async () => {
         const text = reader.result;
-        const lines = text.split(/\r?\n/);
+        const lines = text.split(/\r\n|\n|\r/);
         if (lines.length < 2) {
           alert("CSV is empty or invalid.");
           return;
         }
 
         // Helper to parse CSV line respecting quotes
-        const parseCSVLine = (line) => {
-          const result = [];
-          let current = '';
-          let inQuotes = false;
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-              if (inQuotes && line[i + 1] === '"') {
-                current += '"';
-                i++;
-              } else {
-                inQuotes = !inQuotes;
+        const parseCSVLine = (line, delimiter = ',') => {
+              const result = [];
+              let current = '';
+              let inQuotes = false;
+              for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                  if (inQuotes && line[i + 1] === '"') {
+                    current += '"';
+                    i++;
+                  } else {
+                    inQuotes = !inQuotes;
+                  }
+                } else if (char === delimiter && !inQuotes) {
+                  result.push(current.trim());
+                  current = '';
+                } else {
+                  current += char;
+                }
               }
-            } else if (char === ',' && !inQuotes) {
               result.push(current.trim());
-              current = '';
-            } else {
-              current += char;
-            }
-          }
-          result.push(current.trim());
-          return result;
-        };
+              return result;
+            };
 
-        const headers = parseCSVLine(lines[0]);
+            // Detect delimiter from first line
+            const delimiter = lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',';
+            const headers = parseCSVLine(lines[0], delimiter);
         // Map headers to indices
         const hMap = {};
         headers.forEach((h, i) => {
@@ -685,7 +689,7 @@ const App = {
         });
 
         // Verify required columns exist
-        const requiredHeaders = ["date", "title", "payer", "original amount", "original currency"];
+        const requiredHeaders = ["date", "title", "payer"];
         const missing = requiredHeaders.filter(h => hMap[h] === undefined);
         if (missing.length > 0) {
           alert(`Missing columns in CSV: ${missing.join(', ')}.\nRequired columns are: ${requiredHeaders.join(', ')}`);
@@ -702,15 +706,15 @@ const App = {
           const line = lines[i];
           if (!line.trim()) continue;
 
-          const row = parseCSVLine(line);
-          const date = row[hMap["date"]];
-          const title = row[hMap["title"]];
-          const payer = row[hMap["payer"]];
-          const origAmtStr = row[hMap["original amount"]];
-          const origCurr = row[hMap["original currency"]] || group.currency;
+          const row = parseCSVLine(line, delimiter);
+          const date = row[hMap["date"]] || '';
+          const title = row[hMap["title"]] || '';
+          const payer = row[hMap["payer"]] || '';
+          const origAmtStr = row[hMap["original amount"]] || row[hMap["amount"]] || "0";
+          const origCurr = row[hMap["original currency"]] || row[hMap["currency"]] || group.currency;
           const splitMembersStr = row[hMap["split members"]] || '';
 
-          const amount = parseFloat(origAmtStr.replace(/,/g, '.'));
+          const amount = parseFloat((origAmtStr || '').replace(/,/g, '.'));
           if (!date || !title || !payer || isNaN(amount) || amount <= 0) {
             errorsCount++;
             continue;
@@ -757,6 +761,7 @@ const App = {
 
         this.render();
         this.syncOnline();
+        document.body.removeChild(input);
         alert(`Import completed!\nSuccessfully imported: ${importedCount} expenses.\nSkipped/failed: ${errorsCount} rows.`);
       };
 

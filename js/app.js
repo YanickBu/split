@@ -151,18 +151,35 @@ const App = {
         let group = State.getGroup(groupId);
         let updated = false;
 
+        // If group doesn't exist locally, try to reconstruct it
         if (!group) {
-          const initEvt = history.find(e => e.type === 'INIT');
-          if (initEvt && initEvt.data) {
+          // Prefer snapshot data if available (contains full group state)
+          if (history._snapshotGroup) {
+            const snap = history._snapshotGroup;
             State.data.groups[groupId] = {
               id: groupId,
-              name: initEvt.data.name || 'Shared Group',
-              currency: initEvt.data.currency || 'USD',
-              members: [initEvt.data.creator || 'Member'],
+              name: snap.name || 'Shared Group',
+              currency: snap.currency || 'USD',
+              members: snap.members || ['Member'],
               events: [],
               pendingDeltas: []
             };
             group = State.getGroup(groupId);
+            updated = true;
+          } else {
+            // Fall back to reconstructing from INIT event
+            const initEvt = history.find(e => e.type === 'INIT');
+            if (initEvt && initEvt.data) {
+              State.data.groups[groupId] = {
+                id: groupId,
+                name: initEvt.data.name || 'Shared Group',
+                currency: initEvt.data.currency || 'USD',
+                members: [initEvt.data.creator || 'Member'],
+                events: [],
+                pendingDeltas: []
+              };
+              group = State.getGroup(groupId);
+            }
           }
         }
 
@@ -191,6 +208,31 @@ const App = {
             if (this.currentGroupId === groupId) {
               this.render();
             }
+          }
+        }
+      } else {
+        // No cloud data found — update UI if group still doesn't exist locally
+        if (!State.getGroup(groupId) && this.currentGroupId === groupId) {
+          const appEl = document.getElementById('app');
+          if (appEl) {
+            appEl.innerHTML = `
+              <header>
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <button onclick="App.goHome()" class="btn-icon">←</button>
+                  <h1>Group</h1>
+                </div>
+              </header>
+              <main>
+                <div class="empty-state" style="padding: 40px 20px;">
+                  <div style="font-size: 32px; margin-bottom: 12px;">🔍</div>
+                  <div style="font-size: 15px; color: var(--text); margin-bottom: 6px;">Group not found in cloud</div>
+                  <div style="font-size: 13px; margin-bottom: 20px;">The cloud ledger for this group has expired or was never created. Ask the group owner to open the app so their data gets re-uploaded.</div>
+                  <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="event.preventDefault(); App.syncGroupFromCloud('${groupId}');" class="btn-secondary">🔄 Retry</button>
+                    <button onclick="event.preventDefault(); App.importCSV(event);" class="btn-secondary">📥 Recover from CSV</button>
+                  </div>
+                </div>
+              </main>`;
           }
         }
       }
@@ -819,6 +861,10 @@ const App = {
       } else {
         this._stopRetryLoop();
       }
+
+      // Proactively re-upload snapshot so other browsers can find this group
+      // (ntfy.sh messages expire after ~12h, so we refresh on every page load)
+      JSONBin.sync(group);
 
       // Subscribe to real-time live SSE stream for this group
       EventSourcing.subscribe(this.currentGroupId, (evt) => this.handleLiveEvent(evt));

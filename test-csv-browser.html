@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button id="btn">Click me</button>
+<script>
+  document.getElementById('btn').onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.onchange = async () => {
+      document.body.innerHTML += "<br>File selected: " + input.files[0].name;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.body.innerHTML += "<br>File read. Length: " + reader.result.length;
+        document.body.removeChild(input);
+      };
+      reader.readAsText(input.files[0]);
+    };
+
+    input.click();
+  };
+</script>
+</body>
+</html>

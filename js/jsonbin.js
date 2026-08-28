@@ -50,6 +50,7 @@ const JSONBin = {
       const text = await res.text();
       const lines = text.trim().split('\n');
       const events = [];
+      let snapshotGroup = null;
 
       lines.forEach(line => {
         if (!line.trim()) return;
@@ -57,12 +58,40 @@ const JSONBin = {
           const item = JSON.parse(line);
           if (item && item.message) {
             const parsedEvt = JSON.parse(item.message);
+            
+            // Handle SNAPSHOT_SYNC messages — these contain the full group state
+            if (parsedEvt && parsedEvt.type === 'SNAPSHOT_SYNC' && parsedEvt.groupState) {
+              // Keep the latest snapshot (by timestamp)
+              if (!snapshotGroup || (parsedEvt.timestamp > (snapshotGroup._snapshotTs || 0))) {
+                snapshotGroup = parsedEvt.groupState;
+                snapshotGroup._snapshotTs = parsedEvt.timestamp;
+              }
+              return;
+            }
+            
+            // Handle individual event messages
             if (parsedEvt && (parsedEvt.type || parsedEvt.hash)) {
               events.push(parsedEvt);
             }
           }
         } catch (e) {}
       });
+
+      // If we found a snapshot, extract its events and merge with individual events
+      if (snapshotGroup && snapshotGroup.events && snapshotGroup.events.length > 0) {
+        const allEvents = [...snapshotGroup.events];
+        // Also add any individual events not already in the snapshot
+        events.forEach(evt => {
+          const hashKey = evt.hash || evt.id;
+          const exists = allEvents.some(e => (e.hash === hashKey || e.id === hashKey));
+          if (!exists) {
+            allEvents.push(evt);
+          }
+        });
+        // Tag the result with snapshot metadata so syncGroupFromCloud can use it
+        allEvents._snapshotGroup = snapshotGroup;
+        return allEvents;
+      }
 
       return events;
     } catch (err) {

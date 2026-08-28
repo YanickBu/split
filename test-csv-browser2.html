@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="document.getElementById('importFile').click()">Import CSV</button>
+<input type="file" id="importFile" accept=".csv" style="display:none" onchange="handleFile(event)">
+<div id="output"></div>
+<script>
+  // Dummy State
+  const State = {
+    data: { groups: {} },
+    getGroup: function(id) { return this.data.groups[id]; },
+    appendEvent: function(id, type, data) {
+      if (!this.data.groups[id]) return;
+      this.data.groups[id].events.push({ type, data });
+    }
+  };
+
+  // Dummy Currency
+  const Currency = {
+    rates: {},
+    fetchRates: async function() { return true; },
+    convertWithDate: async function(amount) { return { amount, isPending: false }; }
+  };
+
+  const App = {
+    currentGroupId: 'test_group',
+    publishAndSync: async function() {},
+    syncOnline: function() {},
+    render: function() {},
+    importCSV: function(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      let group = State.getGroup(this.currentGroupId);
+      
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+
+      input.onchange = async () => {
+        try {
+          if (!group) {
+            State.data.groups[this.currentGroupId] = {
+              id: this.currentGroupId,
+              name: 'Recovered Group',
+              currency: 'USD',
+              members: ['Me'],
+              events: [],
+              pendingDeltas: []
+            };
+            group = State.getGroup(this.currentGroupId);
+            State.appendEvent(this.currentGroupId, 'INIT', {});
+          }
+          const file = input.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = async () => {
+            const text = reader.result;
+            document.getElementById('output').innerHTML += "<br>File read. Length: " + text.length;
+            const lines = text.split(/\r?\n/);
+            
+            const parseCSVLine = (line) => {
+              const result = [];
+              let current = '';
+              let inQuotes = false;
+              for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                  if (inQuotes && line[i + 1] === '"') {
+                    current += '"';
+                    i++;
+                  } else {
+                    inQuotes = !inQuotes;
+                  }
+                } else if (char === ',' && !inQuotes) {
+                  result.push(current.trim());
+                  current = '';
+                } else {
+                  current += char;
+                }
+              }
+              result.push(current.trim());
+              return result;
+            };
+
+            const headers = parseCSVLine(lines[0]);
+            const hMap = {};
+            headers.forEach((h, i) => hMap[h.trim().toLowerCase()] = i);
+
+            let importedCount = 0;
+            for (let i = 1; i < lines.length; i++) {
+              if (!lines[i].trim()) continue;
+              const row = parseCSVLine(lines[i]);
+              const date = row[hMap["date"]];
+              const title = row[hMap["title"]];
+              const payer = row[hMap["payer"]];
+              const origAmtStr = row[hMap["original amount"]];
+              const origCurr = row[hMap["original currency"]] || group.currency;
+              const amount = parseFloat(origAmtStr.replace(/,/g, '.'));
+              
+              if (!date || !title || !payer || isNaN(amount) || amount <= 0) continue;
+              
+              const conv = await Currency.convertWithDate(amount, origCurr, group.currency, date);
+              State.appendEvent(this.currentGroupId, 'ADD_EXPENSE', {});
+              importedCount++;
+            }
+            
+            document.body.removeChild(input);
+            document.getElementById('output').innerHTML += "<br>Imported: " + importedCount;
+          };
+          reader.readAsText(file);
+        } catch(e) {
+          document.getElementById('output').innerHTML += "<br>ERROR: " + e.message;
+        }
+      };
+
+      input.click();
+    }
+  };
+
+  document.getElementById('btn').onclick = (e) => App.importCSV(e);
+</script>
+</body>
+</html>

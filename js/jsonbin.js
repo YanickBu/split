@@ -1,6 +1,6 @@
 const JSONBin = {
   PREFIX: 'split_v2_app_',
-  apiKey: '$2b$10$6tLmwP.cVLD00AAmIH0uU.70UpEmnKwxiSbnUcIgF4rlyMx/18bgS',
+  apiKey: '$2b$10$f4uwic0rmfNeH0WEtch25.hFwoA4gxK8jTdPV2VhGHw5WjjdNL5s6',
 
   // Get the jsonbin.io bin ID for a group (stored in localStorage)
   _getBinId(groupId) {

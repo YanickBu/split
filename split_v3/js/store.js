@@ -74,6 +74,10 @@ const Store = {
   createGroup(name, currency, creatorName) {
     const id = 'grp_' + Date.now() + Math.random().toString(36).substring(2, 7);
     
+    // Initialize Yjs store so this.groupMap is available
+    this.init(id, () => {});
+
+    
     // Set map data
     this.groupMap.set('id', id);
     this.groupMap.set('name', name);

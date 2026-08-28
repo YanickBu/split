@@ -719,7 +719,6 @@ const App = {
           // 1. Auto-create payer if they don't exist
           if (!group.members.includes(payer)) {
             const evt = State.appendEvent(this.currentGroupId, 'ADD_MEMBER', { name: payer });
-            await this.publishAndSync(this.currentGroupId, evt);
           }
 
           // 2. Parse split members
@@ -733,7 +732,6 @@ const App = {
             for (const member of splitMembers) {
               if (!group.members.includes(member)) {
                 const evt = State.appendEvent(this.currentGroupId, 'ADD_MEMBER', { name: member });
-                await this.publishAndSync(this.currentGroupId, evt);
               }
             }
           }
@@ -754,11 +752,11 @@ const App = {
             rateSnapshot: Currency.rates
           });
 
-          await this.publishAndSync(this.currentGroupId, evt);
           importedCount++;
         }
 
         this.render();
+        this.syncOnline();
         alert(`Import completed!\nSuccessfully imported: ${importedCount} expenses.\nSkipped/failed: ${errorsCount} rows.`);
       };
 

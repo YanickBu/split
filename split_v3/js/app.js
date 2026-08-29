@@ -285,7 +285,7 @@ const App = {
     navigator.clipboard.writeText(text).then(() => alert(msg)).catch(() => alert("Failed to copy."));
   },
 
-  importCSV(e) {
+  importCSV(_e) {
     document.getElementById('csvInput').click();
   },
 

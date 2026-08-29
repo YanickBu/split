@@ -3,7 +3,7 @@ import Currency from './currency.js';
 
 const Components = {
 
-  renderHome(state) {
+  renderHome(_state) {
     return `
       <header>
         <h1><span class="logo"></span>Split <span>v3</span></h1>

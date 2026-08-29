@@ -1,4 +1,4 @@
-import Currency from './currency.js';
+
 import Store from './store.js';
 
 const CSVExport = {

@@ -87,10 +87,10 @@ const CurrencyPicker = {
 
     if (this.targetInputId === 'expenseCurrency') {
       try {
-        if (typeof App !== 'undefined') {
-          App.lastExpenseCurrency = code;
-          if (App.currentGroupId) {
-            localStorage.setItem('split_last_expense_currency_' + App.currentGroupId, code);
+        if (typeof window.App !== 'undefined') {
+          window.App.lastExpenseCurrency = code;
+          if (window.App.currentGroupId) {
+            localStorage.setItem('split_last_expense_currency_' + window.App.currentGroupId, code);
           }
         }
         localStorage.setItem('split_last_expense_currency', code);

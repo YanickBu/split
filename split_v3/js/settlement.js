@@ -1,3 +1,5 @@
+import Currency from './currency.js';
+
 const Settlement = {
   calculateBalances(group) {
     if (!group || !group.members) return {};

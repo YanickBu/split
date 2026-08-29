@@ -1,0 +1,16 @@
+{
+  "name": "split-v3-checks",
+  "version": "1.0.0",
+  "description": "Validation tools for Split V3",
+  "scripts": {
+    "lint": "eslint \"split_v3/js/**/*.js\"",
+    "typecheck": "tsc --allowJs --checkJs --noEmit --target es2022 --module es2022 --moduleResolution node split_v3/js/app.js",
+    "format": "prettier --check \"split_v3/**/*.{js,html,css}\""
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-plugin-html": "^8.1.1",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.2"
+  }
+}

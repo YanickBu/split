@@ -1,5 +1,5 @@
 import * as Y from 'https://esm.sh/yjs@13.6.14';
-import { WebrtcProvider } from 'https://esm.sh/y-webrtc@13.2.1';
+import { WebrtcProvider } from 'https://esm.sh/y-webrtc@10.3.0';
 import { IndexeddbPersistence } from 'https://esm.sh/y-indexeddb@9.0.12';
 
 const Store = {

@@ -1,6 +1,6 @@
 import * as Y from 'https://esm.sh/yjs@13.6.14';
-import { WebrtcProvider } from 'https://esm.sh/y-webrtc@10.3.0';
-import { IndexeddbPersistence } from 'https://esm.sh/y-indexeddb@9.0.12';
+import { WebrtcProvider } from 'https://esm.sh/y-webrtc@10.3.0?deps=yjs@13.6.14';
+import { IndexeddbPersistence } from 'https://esm.sh/y-indexeddb@9.0.12?deps=yjs@13.6.14';
 
 const Store = {
   ydoc: null,

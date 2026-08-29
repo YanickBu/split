@@ -308,7 +308,15 @@
       </div>
     </dialog>
 
+    <input
+      type="file"
+      id="csvInput"
+      accept=".csv"
+      style="display: none"
+      onchange="window.App.handleCSVUpload(event)"
+    />
+
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=3.0.6"></script>
+    <script type="module" src="js/app.js?v=3.0.7"></script>
   </body>
 </html>

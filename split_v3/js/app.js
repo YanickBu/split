@@ -1,11 +1,11 @@
-import Store from './store.js?v=3.0.3';
-import Currency from './currency.js?v=3.0.3';
-import CurrencyPicker from './currencyPicker.js?v=3.0.3';
-import Components from './components.js?v=3.0.3';
-import QRCode from './qrcode.js?v=3.0.3';
-import Export from "./export.js?v=3.0.3";
-import Settlement from "./settlement.js?v=3.0.3";
-//  './export.js?v=3.0.3';
+import Store from './store.js?v=3.0.4';
+import Currency from './currency.js?v=3.0.4';
+import CurrencyPicker from './currencyPicker.js?v=3.0.4';
+import Components from './components.js?v=3.0.4';
+import QRCode from './qrcode.js?v=3.0.4';
+import Export from "./export.js?v=3.0.4";
+import Settlement from "./settlement.js?v=3.0.4";
+//  './export.js?v=3.0.4';
 
 
 function _escHTML(str) {
@@ -28,7 +28,7 @@ const App = {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=3.0.3').catch(err => console.warn('SW registration skipped:', err));
+      navigator.serviceWorker.register('./sw.js?v=3.0.4').catch(err => console.warn('SW registration skipped:', err));
     }
   },
 

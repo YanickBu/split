@@ -1,5 +1,11 @@
 import Currency from './currency.js';
 
+function _escHTML(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+
 const CurrencyPicker = {
   targetInputId: null,
   targetBtnId: null,

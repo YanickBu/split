@@ -19,11 +19,7 @@ const Store = {
 
     this.persistence = new IndexeddbPersistence(roomName, this.ydoc);
     this.provider = new WebrtcProvider(roomName, this.ydoc, {
-      signaling: [
-        "wss://y-webrtc-signaling-eu.herokuapp.com",
-        "wss://y-webrtc-signaling-us.herokuapp.com",
-        "wss://signaling.yjs.dev",
-      ],
+      signaling: ["wss://signaling.yjs.dev"],
     });
 
     this.groupMap = this.ydoc.getMap("group");

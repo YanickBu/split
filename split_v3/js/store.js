@@ -10,11 +10,13 @@ const Store = {
   groupMap: null,
   eventsArray: null,
 
+  currentRoomName: null,
+
   init(groupId, onUpdate) {
     const roomName = "split-v3-" + groupId;
     this._onUpdate = onUpdate;
 
-    if (this.provider && this.provider.roomName === roomName) {
+    if (this.currentRoomName === roomName && this.ydoc) {
       return;
     }
 
@@ -22,6 +24,7 @@ const Store = {
     if (this.provider) this.provider.destroy();
 
     this.ydoc = new Y.Doc();
+    this.currentRoomName = roomName;
 
     this.persistence = new IndexeddbPersistence(roomName, this.ydoc);
     this.provider = new WebrtcProvider(roomName, this.ydoc, {

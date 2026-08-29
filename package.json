@@ -5,7 +5,8 @@
   "scripts": {
     "lint": "eslint \"split_v3/js/**/*.js\"",
     "typecheck": "tsc --allowJs --checkJs --noEmit --target es2022 --module es2022 --moduleResolution node split_v3/js/app.js",
-    "format": "prettier --check \"split_v3/**/*.{js,html,css}\""
+    "format:check": "npx prettier --check \"split_v3/**/*.{js,html,css}\"",
+    "format:write": "npx prettier --write \"split_v3/**/*.{js,html,css}\""
   },
   "devDependencies": {
     "eslint": "^8.57.0",

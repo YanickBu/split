@@ -1,21 +1,22 @@
 const CurrencyPicker = {
   targetInputId: null,
   targetBtnId: null,
-  selectedCode: 'USD',
+  selectedCode: "USD",
 
   init() {
-    const searchInput = document.getElementById('currencySearchInput');
+    const searchInput = document.getElementById("currencySearchInput");
     if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const clearBtn = document.getElementById('clearSearchBtn');
-        if (clearBtn) clearBtn.style.display = e.target.value ? 'block' : 'none';
+      searchInput.addEventListener("input", (e) => {
+        const clearBtn = document.getElementById("clearSearchBtn");
+        if (clearBtn)
+          clearBtn.style.display = e.target.value ? "block" : "none";
         this.renderList(e.target.value);
       });
     }
     // Event delegation for currency item clicks (no inline onclick with user data)
-    const listEl = document.getElementById('currencyPickerList');
+    const listEl = document.getElementById("currencyPickerList");
     if (listEl) {
-      listEl.addEventListener('click', (e) => {
+      listEl.addEventListener("click", (e) => {
         const item = e.target.closest('[data-action="selectCurrency"]');
         if (item && item.dataset.code) {
           this.select(item.dataset.code);
@@ -28,17 +29,17 @@ const CurrencyPicker = {
     this.targetInputId = targetInputId;
     this.targetBtnId = targetBtnId;
     const inputEl = document.getElementById(targetInputId);
-    this.selectedCode = inputEl ? inputEl.value : 'USD';
+    this.selectedCode = inputEl ? inputEl.value : "USD";
 
-    const modal = document.getElementById('currencyPickerModal');
-    const searchInput = document.getElementById('currencySearchInput');
+    const modal = document.getElementById("currencyPickerModal");
+    const searchInput = document.getElementById("currencySearchInput");
     if (searchInput) {
-      searchInput.value = '';
-      const clearBtn = document.getElementById('clearSearchBtn');
-      if (clearBtn) clearBtn.style.display = 'none';
+      searchInput.value = "";
+      const clearBtn = document.getElementById("clearSearchBtn");
+      if (clearBtn) clearBtn.style.display = "none";
     }
 
-    this.renderList('');
+    this.renderList("");
     if (modal) {
       modal.showModal();
       setTimeout(() => {
@@ -48,14 +49,14 @@ const CurrencyPicker = {
   },
 
   clearSearch() {
-    const searchInput = document.getElementById('currencySearchInput');
+    const searchInput = document.getElementById("currencySearchInput");
     if (searchInput) {
-      searchInput.value = '';
+      searchInput.value = "";
       searchInput.focus();
     }
-    const clearBtn = document.getElementById('clearSearchBtn');
-    if (clearBtn) clearBtn.style.display = 'none';
-    this.renderList('');
+    const clearBtn = document.getElementById("clearSearchBtn");
+    if (clearBtn) clearBtn.style.display = "none";
+    this.renderList("");
   },
 
   setButtonValue(targetInputId, targetBtnId, code) {
@@ -77,24 +78,27 @@ const CurrencyPicker = {
     this.selectedCode = code;
     this.setButtonValue(this.targetInputId, this.targetBtnId, code);
 
-    if (this.targetInputId === 'expenseCurrency') {
+    if (this.targetInputId === "expenseCurrency") {
       try {
-        if (typeof App !== 'undefined') {
+        if (typeof App !== "undefined") {
           App.lastExpenseCurrency = code;
           if (App.currentGroupId) {
-            localStorage.setItem('split_last_expense_currency_' + App.currentGroupId, code);
+            localStorage.setItem(
+              "split_last_expense_currency_" + App.currentGroupId,
+              code,
+            );
           }
         }
-        localStorage.setItem('split_last_expense_currency', code);
+        localStorage.setItem("split_last_expense_currency", code);
       } catch (err) {}
     }
 
-    const modal = document.getElementById('currencyPickerModal');
+    const modal = document.getElementById("currencyPickerModal");
     if (modal) modal.close();
   },
 
   renderList(query) {
-    const listEl = document.getElementById('currencyPickerList');
+    const listEl = document.getElementById("currencyPickerList");
     if (!listEl) return;
 
     const filtered = Currency.search(query);
@@ -104,26 +108,28 @@ const CurrencyPicker = {
       return;
     }
 
-    listEl.innerHTML = filtered.map(c => {
-      const isSelected = c.code === this.selectedCode;
-      let rateInfo = '';
-      if (Currency.rates && Currency.rates[c.code]) {
-        const rate = Currency.rates[c.code];
-        rateInfo = `<span class="rate-badge">1 USD = ${rate < 0.01 ? rate.toFixed(4) : rate.toFixed(2)} ${c.code}</span>`;
-      }
+    listEl.innerHTML = filtered
+      .map((c) => {
+        const isSelected = c.code === this.selectedCode;
+        let rateInfo = "";
+        if (Currency.rates && Currency.rates[c.code]) {
+          const rate = Currency.rates[c.code];
+          rateInfo = `<span class="rate-badge">1 USD = ${rate < 0.01 ? rate.toFixed(4) : rate.toFixed(2)} ${c.code}</span>`;
+        }
 
-      return `
-        <div class="currency-item ${isSelected ? 'selected' : ''}" data-action="selectCurrency" data-code="${_escHTML(c.code)}">
+        return `
+        <div class="currency-item ${isSelected ? "selected" : ""}" data-action="selectCurrency" data-code="${_escHTML(c.code)}">
           <div class="currency-item-symbol">${_escHTML(c.symbol)}</div>
           <div class="currency-item-details">
-            <div class="currency-item-code">${_escHTML(c.code)} ${isSelected ? '✓' : ''}</div>
+            <div class="currency-item-code">${_escHTML(c.code)} ${isSelected ? "✓" : ""}</div>
             <div class="currency-item-name">${_escHTML(c.name)}</div>
           </div>
           ${rateInfo}
         </div>
       `;
-    }).join('');
-  }
+      })
+      .join("");
+  },
 };
 
-document.addEventListener('DOMContentLoaded', () => CurrencyPicker.init());
+document.addEventListener("DOMContentLoaded", () => CurrencyPicker.init());

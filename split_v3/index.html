@@ -1,165 +1,314 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <meta name="theme-color" content="#000000">
-  <title>Split</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/styles.css?v=3.0.0">
-<script>
-    window.addEventListener('error', function(e) {
-      if (document.body) {
-        document.body.innerHTML += '<div style="color:red; background:white; padding:20px; z-index:9999; position:fixed; top:0; left:0; width:100%; word-break:break-all;"><b>Error:</b> ' + e.message + '<br>' + e.filename + ':' + e.lineno + '</div>';
-      }
-    });
-    window.addEventListener('unhandledrejection', function(e) {
-      if (document.body) {
-        document.body.innerHTML += '<div style="color:red; background:white; padding:20px; z-index:9999; position:fixed; top:80px; left:0; width:100%; word-break:break-all;"><b>Promise Error:</b> ' + String(e.reason) + '</div>';
-      }
-    });
-  </script>
-</head>
-<body>
-  <div id="app"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="theme-color" content="#000000" />
+    <title>Split</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="css/styles.css?v=3.0.0" />
+    <script>
+      window.addEventListener("error", function (e) {
+        if (document.body) {
+          document.body.innerHTML +=
+            '<div style="color:red; background:white; padding:20px; z-index:9999; position:fixed; top:0; left:0; width:100%; word-break:break-all;"><b>Error:</b> ' +
+            e.message +
+            "<br>" +
+            e.filename +
+            ":" +
+            e.lineno +
+            "</div>";
+        }
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        if (document.body) {
+          document.body.innerHTML +=
+            '<div style="color:red; background:white; padding:20px; z-index:9999; position:fixed; top:80px; left:0; width:100%; word-break:break-all;"><b>Promise Error:</b> ' +
+            String(e.reason) +
+            "</div>";
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
 
-  <!-- Modals -->
-  <dialog id="newGroupModal">
-    <div class="modal-content">
-      <h2>+ New Group</h2>
-      <form id="newGroupForm">
-        <label for="groupName">Group Name</label>
-        <input type="text" id="groupName" required placeholder="e.g. Ski Trip">
-        
-        <label for="groupCurrencyBtn">Settlement Currency</label>
-        <button type="button" id="groupCurrencyBtn" class="currency-picker-btn" onclick="CurrencyPicker.open('groupCurrency', 'groupCurrencyBtn')">
-          <span class="curr-badge">$</span>
-          <span class="curr-text"><strong>USD</strong> — US Dollar</span>
-          <span class="curr-search-icon">🔍</span>
-        </button>
-        <input type="hidden" id="groupCurrency" value="USD" required>
+    <!-- Modals -->
+    <dialog id="newGroupModal">
+      <div class="modal-content">
+        <h2>+ New Group</h2>
+        <form id="newGroupForm">
+          <label for="groupName">Group Name</label>
+          <input
+            type="text"
+            id="groupName"
+            required
+            placeholder="e.g. Ski Trip"
+          />
 
-        <label for="creatorName">Your Name</label>
-        <input type="text" id="creatorName" required placeholder="e.g. Alice">
-        
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" onclick="document.getElementById('newGroupModal').close()">Cancel</button>
-          <button type="submit" class="btn-primary">Create</button>
-        </div>
-      </form>
-    </div>
-  </dialog>
+          <label for="groupCurrencyBtn">Settlement Currency</label>
+          <button
+            type="button"
+            id="groupCurrencyBtn"
+            class="currency-picker-btn"
+            onclick="CurrencyPicker.open('groupCurrency', 'groupCurrencyBtn')"
+          >
+            <span class="curr-badge">$</span>
+            <span class="curr-text"><strong>USD</strong> — US Dollar</span>
+            <span class="curr-search-icon">🔍</span>
+          </button>
+          <input type="hidden" id="groupCurrency" value="USD" required />
 
-  <dialog id="addMemberModal">
-    <div class="modal-content">
-      <h2>+ Add Member</h2>
-      <form id="addMemberForm">
-        <label for="memberName">Member Name</label>
-        <input type="text" id="memberName" required>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" onclick="document.getElementById('addMemberModal').close()">Cancel</button>
-          <button type="submit" class="btn-primary">Add</button>
-        </div>
-      </form>
-    </div>
-  </dialog>
+          <label for="creatorName">Your Name</label>
+          <input
+            type="text"
+            id="creatorName"
+            required
+            placeholder="e.g. Alice"
+          />
 
-  <dialog id="addExpenseModal">
-    <div class="modal-content">
-      <h2>Add Expense</h2>
-      <form id="addExpenseForm">
-        <label for="expenseTitle">Title</label>
-        <input type="text" id="expenseTitle" required placeholder="What was this for?">
-        <div class="quick-chips" id="quickCategoryChips">
-          <button type="button" class="chip">🍕 Pizza & Drinks</button>
-          <button type="button" class="chip">🚖 Uber / Taxi</button>
-          <button type="button" class="chip">☕ Coffee & Snacks</button>
-          <button type="button" class="chip">🛒 Groceries</button>
-        </div>
-
-        <label for="expenseAmount">Amount</label>
-        <input type="text" inputmode="decimal" id="expenseAmount" required placeholder="0.00">
-        <div class="quick-chips" id="quickAmountChips">
-          <button type="button" class="chip">10</button>
-          <button type="button" class="chip">20</button>
-          <button type="button" class="chip">50</button>
-          <button type="button" class="chip">100</button>
-        </div>
-        
-        <label for="expenseCurrencyBtn">Currency</label>
-        <button type="button" id="expenseCurrencyBtn" class="currency-picker-btn" onclick="CurrencyPicker.open('expenseCurrency', 'expenseCurrencyBtn')">
-          <span class="curr-badge">$</span>
-          <span class="curr-text"><strong>USD</strong> — US Dollar</span>
-          <span class="curr-search-icon">🔍</span>
-        </button>
-        <input type="hidden" id="expenseCurrency" value="USD" required>
-
-        <label for="expenseDate">Date</label>
-        <input type="date" id="expenseDate" required>
-
-        <label for="expensePayer">Paid By</label>
-        <select id="expensePayer" required></select>
-
-        <label>Split Between</label>
-        <div class="members-split-chips" id="expenseSplitMembers"></div>
-        
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" onclick="document.getElementById('addExpenseModal').close()">Cancel</button>
-          <button type="submit" class="btn-primary">Save</button>
-        </div>
-      </form>
-    </div>
-  </dialog>
-
-  <!-- Combined Share & QR Code Modal -->
-  <dialog id="shareModal">
-    <div class="modal-content text-center" style="text-align: center;">
-      <div class="currency-modal-header">
-        <h2>Share Group</h2>
-        <button type="button" class="btn-icon modal-close-btn" onclick="document.getElementById('shareModal').close()">✕</button>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-cancel"
+              onclick="document.getElementById('newGroupModal').close()"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn-primary">Create</button>
+          </div>
+        </form>
       </div>
-      <div id="qrCodeContainer" style="margin: 16px auto; display: flex; justify-content: center;"></div>
-      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px;">Scan with phone camera or share link below</p>
-      <div class="modal-actions" style="flex-direction: column; gap: 8px;">
-        <button type="button" class="btn-primary" onclick="App.shareUrl()">📤 Share Link</button>
-        <button type="button" class="btn-cancel" onclick="App.shareSummary()">📋 Copy Summary</button>
-      </div>
-    </div>
-  </dialog>
+    </dialog>
 
-  <!-- Searchable Currency Picker Modal -->
-  <dialog id="currencyPickerModal">
-    <div class="modal-content currency-modal-content">
-      <div class="currency-modal-header">
-        <h2>Select Currency</h2>
-        <button type="button" class="btn-icon modal-close-btn" onclick="document.getElementById('currencyPickerModal').close()">✕</button>
+    <dialog id="addMemberModal">
+      <div class="modal-content">
+        <h2>+ Add Member</h2>
+        <form id="addMemberForm">
+          <label for="memberName">Member Name</label>
+          <input type="text" id="memberName" required />
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-cancel"
+              onclick="document.getElementById('addMemberModal').close()"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn-primary">Add</button>
+          </div>
+        </form>
       </div>
-      
-      <div class="search-box">
-        <input type="text" id="currencySearchInput" placeholder="🔍 Search currency (USD, Euro, ¥, Yen...)" autocomplete="off">
-        <button type="button" id="clearSearchBtn" class="clear-search-btn" style="display:none;" onclick="CurrencyPicker.clearSearch()">✕</button>
-      </div>
-      
-      <div class="popular-currencies">
-        <span class="chip-label">Popular:</span>
-        <button type="button" class="chip" onclick="CurrencyPicker.select('USD')">$ USD</button>
-        <button type="button" class="chip" onclick="CurrencyPicker.select('EUR')">€ EUR</button>
-        <button type="button" class="chip" onclick="CurrencyPicker.select('GBP')">£ GBP</button>
-        <button type="button" class="chip" onclick="CurrencyPicker.select('JPY')">¥ JPY</button>
-        <button type="button" class="chip" onclick="CurrencyPicker.select('CAD')">CA$ CAD</button>
-        <button type="button" class="chip" onclick="CurrencyPicker.select('AUD')">A$ AUD</button>
-        <button type="button" class="chip" onclick="CurrencyPicker.select('CHF')">CHF</button>
-        <button type="button" class="chip" onclick="CurrencyPicker.select('INR')">₹ INR</button>
-      </div>
-      
-      <div id="currencyPickerList" class="currency-picker-list"></div>
-    </div>
-  </dialog>
+    </dialog>
 
-  <!-- Scripts -->
-  <script type="module" src="js/app.js?v=3.0.6"></script>
-</body>
+    <dialog id="addExpenseModal">
+      <div class="modal-content">
+        <h2>Add Expense</h2>
+        <form id="addExpenseForm">
+          <label for="expenseTitle">Title</label>
+          <input
+            type="text"
+            id="expenseTitle"
+            required
+            placeholder="What was this for?"
+          />
+          <div class="quick-chips" id="quickCategoryChips">
+            <button type="button" class="chip">🍕 Pizza & Drinks</button>
+            <button type="button" class="chip">🚖 Uber / Taxi</button>
+            <button type="button" class="chip">☕ Coffee & Snacks</button>
+            <button type="button" class="chip">🛒 Groceries</button>
+          </div>
+
+          <label for="expenseAmount">Amount</label>
+          <input
+            type="text"
+            inputmode="decimal"
+            id="expenseAmount"
+            required
+            placeholder="0.00"
+          />
+          <div class="quick-chips" id="quickAmountChips">
+            <button type="button" class="chip">10</button>
+            <button type="button" class="chip">20</button>
+            <button type="button" class="chip">50</button>
+            <button type="button" class="chip">100</button>
+          </div>
+
+          <label for="expenseCurrencyBtn">Currency</label>
+          <button
+            type="button"
+            id="expenseCurrencyBtn"
+            class="currency-picker-btn"
+            onclick="
+              CurrencyPicker.open('expenseCurrency', 'expenseCurrencyBtn')
+            "
+          >
+            <span class="curr-badge">$</span>
+            <span class="curr-text"><strong>USD</strong> — US Dollar</span>
+            <span class="curr-search-icon">🔍</span>
+          </button>
+          <input type="hidden" id="expenseCurrency" value="USD" required />
+
+          <label for="expenseDate">Date</label>
+          <input type="date" id="expenseDate" required />
+
+          <label for="expensePayer">Paid By</label>
+          <select id="expensePayer" required></select>
+
+          <label>Split Between</label>
+          <div class="members-split-chips" id="expenseSplitMembers"></div>
+
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-cancel"
+              onclick="document.getElementById('addExpenseModal').close()"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- Combined Share & QR Code Modal -->
+    <dialog id="shareModal">
+      <div class="modal-content text-center" style="text-align: center">
+        <div class="currency-modal-header">
+          <h2>Share Group</h2>
+          <button
+            type="button"
+            class="btn-icon modal-close-btn"
+            onclick="document.getElementById('shareModal').close()"
+          >
+            ✕
+          </button>
+        </div>
+        <div
+          id="qrCodeContainer"
+          style="margin: 16px auto; display: flex; justify-content: center"
+        ></div>
+        <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px">
+          Scan with phone camera or share link below
+        </p>
+        <div class="modal-actions" style="flex-direction: column; gap: 8px">
+          <button type="button" class="btn-primary" onclick="App.shareUrl()">
+            📤 Share Link
+          </button>
+          <button type="button" class="btn-cancel" onclick="App.shareSummary()">
+            📋 Copy Summary
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Searchable Currency Picker Modal -->
+    <dialog id="currencyPickerModal">
+      <div class="modal-content currency-modal-content">
+        <div class="currency-modal-header">
+          <h2>Select Currency</h2>
+          <button
+            type="button"
+            class="btn-icon modal-close-btn"
+            onclick="document.getElementById('currencyPickerModal').close()"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="search-box">
+          <input
+            type="text"
+            id="currencySearchInput"
+            placeholder="🔍 Search currency (USD, Euro, ¥, Yen...)"
+            autocomplete="off"
+          />
+          <button
+            type="button"
+            id="clearSearchBtn"
+            class="clear-search-btn"
+            style="display: none"
+            onclick="CurrencyPicker.clearSearch()"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="popular-currencies">
+          <span class="chip-label">Popular:</span>
+          <button
+            type="button"
+            class="chip"
+            onclick="CurrencyPicker.select('USD')"
+          >
+            $ USD
+          </button>
+          <button
+            type="button"
+            class="chip"
+            onclick="CurrencyPicker.select('EUR')"
+          >
+            € EUR
+          </button>
+          <button
+            type="button"
+            class="chip"
+            onclick="CurrencyPicker.select('GBP')"
+          >
+            £ GBP
+          </button>
+          <button
+            type="button"
+            class="chip"
+            onclick="CurrencyPicker.select('JPY')"
+          >
+            ¥ JPY
+          </button>
+          <button
+            type="button"
+            class="chip"
+            onclick="CurrencyPicker.select('CAD')"
+          >
+            CA$ CAD
+          </button>
+          <button
+            type="button"
+            class="chip"
+            onclick="CurrencyPicker.select('AUD')"
+          >
+            A$ AUD
+          </button>
+          <button
+            type="button"
+            class="chip"
+            onclick="CurrencyPicker.select('CHF')"
+          >
+            CHF
+          </button>
+          <button
+            type="button"
+            class="chip"
+            onclick="CurrencyPicker.select('INR')"
+          >
+            ₹ INR
+          </button>
+        </div>
+
+        <div id="currencyPickerList" class="currency-picker-list"></div>
+      </div>
+    </dialog>
+
+    <!-- Scripts -->
+    <script type="module" src="js/app.js?v=3.0.6"></script>
+  </body>
 </html>

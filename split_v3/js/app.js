@@ -1,52 +1,58 @@
-import Store from './store.js?v=3.0.4';
-import Currency from './currency.js?v=3.0.4';
-import CurrencyPicker from './currencyPicker.js?v=3.0.4';
-import Components from './components.js?v=3.0.4';
-import QRCode from './qrcode.js?v=3.0.4';
+import Store from "./store.js?v=3.0.4";
+import Currency from "./currency.js?v=3.0.4";
+import CurrencyPicker from "./currencyPicker.js?v=3.0.4";
+import Components from "./components.js?v=3.0.4";
+import QRCode from "./qrcode.js?v=3.0.4";
 import Export from "./export.js?v=3.0.4";
 import Settlement from "./settlement.js?v=3.0.4";
 //  './export.js?v=3.0.4';
 
-
 function _escHTML(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 const App = {
   currentGroupId: null,
   lastExpenseCurrency: null,
   lastExpensePayer: null,
-  
+
   async init() {
     this.registerServiceWorker();
-    if (typeof Currency !== 'undefined') await Currency.fetchRates();
+    if (typeof Currency !== "undefined") await Currency.fetchRates();
     this.setupRoutes();
     this.setupListeners();
     this.handleHashChange();
   },
 
   registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=3.0.4').catch(err => console.warn('SW registration skipped:', err));
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("./sw.js?v=3.0.4")
+        .catch((err) => console.warn("SW registration skipped:", err));
     }
   },
 
   setupRoutes() {
-    window.addEventListener('hashchange', () => this.handleHashChange());
+    window.addEventListener("hashchange", () => this.handleHashChange());
   },
 
   handleHashChange() {
     const hash = window.location.hash.substring(1);
-    
-    if (hash.startsWith('group=')) {
+
+    if (hash.startsWith("group=")) {
       const params = new URLSearchParams(hash);
-      const groupId = params.get('group');
+      const groupId = params.get("group");
       this.currentGroupId = groupId;
-      
+
       // Initialize Yjs store for this specific group room
       Store.init(groupId, () => this.render());
-      
+
       // The render will happen automatically once Store syncs
       this.render();
     } else {
@@ -56,94 +62,115 @@ const App = {
   },
 
   setupListeners() {
-    document.getElementById('newGroupForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('groupName').value;
-      const currency = document.getElementById('groupCurrency').value;
-      const creator = document.getElementById('creatorName').value;
-      
-      const groupId = Store.createGroup(name, currency, creator);
-      window.location.hash = `group=${groupId}`;
-      
-      document.getElementById('newGroupModal').close();
-      e.target.reset();
-    });
+    document
+      .getElementById("newGroupForm")
+      .addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("groupName").value;
+        const currency = document.getElementById("groupCurrency").value;
+        const creator = document.getElementById("creatorName").value;
 
-    document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('memberName').value;
-      Store.appendEvent(this.currentGroupId, 'ADD_MEMBER', { name });
-      document.getElementById('addMemberModal').close();
-      e.target.reset();
-    });
+        const groupId = Store.createGroup(name, currency, creator);
+        window.location.hash = `group=${groupId}`;
 
-    document.getElementById('addExpenseForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const title = document.getElementById('expenseTitle').value;
-      const amount = parseFloat(document.getElementById('expenseAmount').value);
-      const currency = document.getElementById('expenseCurrency').value;
-      const payer = document.getElementById('expensePayer').value;
-      const expenseDate = document.getElementById('expenseDate').value;
-      
-      const group = Store.getGroup();
-      if (!group) return;
-
-      const splitMembers = Array.from(document.querySelectorAll('.split-member-checkbox:checked')).map(cb => cb.value);
-      if (splitMembers.length === 0) {
-        alert("Select at least one person to split with.");
-        return;
-      }
-      
-      this.lastExpenseCurrency = currency;
-      this.lastExpensePayer = payer;
-      
-      try {
-        localStorage.setItem('split_last_expense_currency_' + this.currentGroupId, currency);
-        localStorage.setItem('split_last_expense_payer_' + this.currentGroupId, payer);
-      } catch (err) {}
-      
-      let convAmount = amount;
-      let isPending = false;
-      let rateSnap = {};
-
-      if (typeof Currency !== 'undefined') {
-        const conv = await Currency.convertWithDate(amount, currency, group.currency, expenseDate);
-        convAmount = conv.amount;
-        isPending = conv.isPending;
-        rateSnap = Currency.rates;
-      }
-      
-      Store.appendEvent(this.currentGroupId, 'ADD_EXPENSE', {
-        title,
-        originalAmount: amount,
-        originalCurrency: currency,
-        groupAmount: convAmount,
-        isPendingRate: isPending,
-        payer,
-        expenseDate,
-        splitMembers,
-        rateSnapshot: rateSnap
+        document.getElementById("newGroupModal").close();
+        e.target.reset();
       });
 
-      document.getElementById('addExpenseModal').close();
-      e.target.reset();
-    });
+    document
+      .getElementById("addMemberForm")
+      .addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("memberName").value;
+        Store.appendEvent(this.currentGroupId, "ADD_MEMBER", { name });
+        document.getElementById("addMemberModal").close();
+        e.target.reset();
+      });
+
+    document
+      .getElementById("addExpenseForm")
+      .addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const title = document.getElementById("expenseTitle").value;
+        const amount = parseFloat(
+          document.getElementById("expenseAmount").value,
+        );
+        const currency = document.getElementById("expenseCurrency").value;
+        const payer = document.getElementById("expensePayer").value;
+        const expenseDate = document.getElementById("expenseDate").value;
+
+        const group = Store.getGroup();
+        if (!group) return;
+
+        const splitMembers = Array.from(
+          document.querySelectorAll(".split-member-checkbox:checked"),
+        ).map((cb) => cb.value);
+        if (splitMembers.length === 0) {
+          alert("Select at least one person to split with.");
+          return;
+        }
+
+        this.lastExpenseCurrency = currency;
+        this.lastExpensePayer = payer;
+
+        try {
+          localStorage.setItem(
+            "split_last_expense_currency_" + this.currentGroupId,
+            currency,
+          );
+          localStorage.setItem(
+            "split_last_expense_payer_" + this.currentGroupId,
+            payer,
+          );
+        } catch (err) {}
+
+        let convAmount = amount;
+        let isPending = false;
+        let rateSnap = {};
+
+        if (typeof Currency !== "undefined") {
+          const conv = await Currency.convertWithDate(
+            amount,
+            currency,
+            group.currency,
+            expenseDate,
+          );
+          convAmount = conv.amount;
+          isPending = conv.isPending;
+          rateSnap = Currency.rates;
+        }
+
+        Store.appendEvent(this.currentGroupId, "ADD_EXPENSE", {
+          title,
+          originalAmount: amount,
+          originalCurrency: currency,
+          groupAmount: convAmount,
+          isPendingRate: isPending,
+          payer,
+          expenseDate,
+          splitMembers,
+          rateSnapshot: rateSnap,
+        });
+
+        document.getElementById("addExpenseModal").close();
+        e.target.reset();
+      });
   },
 
   openGroup(id) {
     window.location.hash = `group=${id}`;
   },
-  
+
   goHome() {
-    window.location.hash = '';
+    window.location.hash = "";
   },
 
   async render() {
-    const appEl = document.getElementById('app');
-    
+    const appEl = document.getElementById("app");
+
     if (this.currentGroupId) {
       const group = Store.getGroup();
-      
+
       if (!group || !group.name) {
         // Still loading from Yjs
         appEl.innerHTML = `
@@ -162,66 +189,81 @@ const App = {
       }
 
       appEl.innerHTML = Components.renderGroupDashboard(group);
-      
+
       // Update header
-      document.getElementById('groupTitleDisplay').innerText = group.name;
-      
+      document.getElementById("groupTitleDisplay").innerText = group.name;
+
       // Setup expense form defaults
-      const lastCur = localStorage.getItem('split_last_expense_currency_' + group.id) || group.currency;
-      const curSelect = document.getElementById('expenseCurrency');
+      const lastCur =
+        localStorage.getItem("split_last_expense_currency_" + group.id) ||
+        group.currency;
+      const curSelect = document.getElementById("expenseCurrency");
       if (curSelect) curSelect.value = lastCur;
-      
-      const lastPayer = localStorage.getItem('split_last_expense_payer_' + group.id);
-      const payerSelect = document.getElementById('expensePayer');
+
+      const lastPayer = localStorage.getItem(
+        "split_last_expense_payer_" + group.id,
+      );
+      const payerSelect = document.getElementById("expensePayer");
       if (payerSelect && lastPayer) payerSelect.value = lastPayer;
 
-      if (typeof CurrencyPicker !== 'undefined') {
-        CurrencyPicker.init('expenseCurrency');
+      if (typeof CurrencyPicker !== "undefined") {
+        CurrencyPicker.init("expenseCurrency");
       }
     } else {
       appEl.innerHTML = Components.renderHome({});
-      if (typeof CurrencyPicker !== 'undefined') {
-        CurrencyPicker.init('groupCurrency');
+      if (typeof CurrencyPicker !== "undefined") {
+        CurrencyPicker.init("groupCurrency");
       }
     }
   },
 
   showAddMemberModal() {
-    document.getElementById('addMemberModal').showModal();
+    document.getElementById("addMemberModal").showModal();
   },
-  
+
   showAddExpenseModal() {
     const group = Store.getGroup();
-    const container = document.getElementById('splitMembersContainer');
+    const container = document.getElementById("splitMembersContainer");
     if (container && group) {
-      container.innerHTML = group.members.map(m => `
+      container.innerHTML = group.members
+        .map(
+          (m) => `
         <label class="member-checkbox">
           <input type="checkbox" class="split-member-checkbox" value="${_escHTML(m)}" checked>
           <span>${_escHTML(m)}</span>
         </label>
-      `).join('');
+      `,
+        )
+        .join("");
     }
-    
-    const dateInput = document.getElementById('expenseDate');
+
+    const dateInput = document.getElementById("expenseDate");
     if (dateInput) {
-      dateInput.value = new Date().toISOString().split('T')[0];
+      dateInput.value = new Date().toISOString().split("T")[0];
     }
-    
-    document.getElementById('addExpenseModal').showModal();
+
+    document.getElementById("addExpenseModal").showModal();
   },
 
   voidExpense(hash) {
-    if (confirm("Are you sure you want to void this expense? This action will be recorded in the ledger.")) {
-      Store.appendEvent(this.currentGroupId, 'VOID_EXPENSE', { targetHash: hash });
+    if (
+      confirm(
+        "Are you sure you want to void this expense? This action will be recorded in the ledger.",
+      )
+    ) {
+      Store.appendEvent(this.currentGroupId, "VOID_EXPENSE", {
+        targetHash: hash,
+      });
     }
   },
 
   showShareModal() {
     const url = window.location.href;
-    const svg = typeof QRCode !== 'undefined' ? QRCode.generateSVG(url, 220) : '';
-    const container = document.getElementById('qrCodeContainer');
+    const svg =
+      typeof QRCode !== "undefined" ? QRCode.generateSVG(url, 220) : "";
+    const container = document.getElementById("qrCodeContainer");
     if (container) container.innerHTML = svg;
-    const modal = document.getElementById('shareModal');
+    const modal = document.getElementById("shareModal");
     if (modal) modal.showModal();
   },
 
@@ -229,7 +271,7 @@ const App = {
     const url = window.location.href;
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Split V3', url: url });
+        await navigator.share({ title: "Split V3", url: url });
       } catch (err) {}
     } else {
       navigator.clipboard.writeText(url);
@@ -237,29 +279,34 @@ const App = {
     }
   },
 
-
   async settleUp() {
-    if (confirm("Are you sure you want to settle up? This will void all current expenses and bring everyone's balance to zero.")) {
+    if (
+      confirm(
+        "Are you sure you want to settle up? This will void all current expenses and bring everyone's balance to zero.",
+      )
+    ) {
       const group = Store.getGroup();
       if (!group || !group.events) return;
-      group.events.forEach(evt => {
-        if (evt.type === 'ADD_EXPENSE') {
-          Store.appendEvent(this.currentGroupId, 'STORNO_EXPENSE', { targetHash: evt.hash, expenseId: evt.id });
+      group.events.forEach((evt) => {
+        if (evt.type === "ADD_EXPENSE") {
+          Store.appendEvent(this.currentGroupId, "STORNO_EXPENSE", {
+            targetHash: evt.hash,
+            expenseId: evt.id,
+          });
         }
       });
     }
   },
 
   exportCSV(e) {
-    if (typeof Export !== 'undefined') {
+    if (typeof Export !== "undefined") {
       Export.exportCSV(this, e);
     }
   },
-  
+
   showAddMember() {
     this.showAddMemberModal();
   },
-
 
   async shareSummary() {
     const group = Store.getGroup();
@@ -267,26 +314,29 @@ const App = {
     const balances = Settlement.calculateBalances(group);
     const settlements = Settlement.calculateSettlements(balances);
     const summary = Settlement.generateSummary(group, balances, settlements);
-    
+
     if (navigator.share) {
       try {
         await navigator.share({
           title: group.name,
           text: summary,
-          url: window.location.href
+          url: window.location.href,
         });
         return;
       } catch (e) {}
     }
     this.copyToClipboard(summary, "Summary copied to clipboard!");
   },
-  
+
   copyToClipboard(text, msg = "Copied to clipboard!") {
-    navigator.clipboard.writeText(text).then(() => alert(msg)).catch(() => alert("Failed to copy."));
+    navigator.clipboard
+      .writeText(text)
+      .then(() => alert(msg))
+      .catch(() => alert("Failed to copy."));
   },
 
   importCSV(_e) {
-    document.getElementById('csvInput').click();
+    document.getElementById("csvInput").click();
   },
 
   handleCSVUpload(e) {
@@ -295,42 +345,54 @@ const App = {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       const text = evt.target.result;
-      const rows = text.split('\n');
+      const rows = text.split("\n");
       let importedCount = 0;
-      
+
       const group = Store.getGroup();
       if (!group) return;
 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i].trim();
         if (!row) continue;
-        const cols = row.split(',').map(c => c.replace(/^"|"$/g, '').trim());
+        const cols = row.split(",").map((c) => c.replace(/^"|"$/g, "").trim());
         if (cols.length >= 6) {
           const date = cols[0];
           const title = cols[1];
           const payer = cols[2];
           const amount = parseFloat(cols[3]);
           const cur = cols[4];
-          const members = cols[5].split(';').map(m => m.trim());
-          
+          const members = cols[5].split(";").map((m) => m.trim());
+
           if (!payer || !amount || members.length === 0) continue;
-          
-          if (!group.members.includes(payer)) Store.appendEvent(group.id, 'ADD_MEMBER', { name: payer });
-          members.forEach(m => {
-            if (!group.members.includes(m)) Store.appendEvent(group.id, 'ADD_MEMBER', { name: m });
+
+          if (!group.members.includes(payer))
+            Store.appendEvent(group.id, "ADD_MEMBER", { name: payer });
+          members.forEach((m) => {
+            if (!group.members.includes(m))
+              Store.appendEvent(group.id, "ADD_MEMBER", { name: m });
           });
-          
+
           let convAmount = amount;
-          if (typeof Currency !== 'undefined') {
-            const conv = await Currency.convertWithDate(amount, cur, group.currency, date);
+          if (typeof Currency !== "undefined") {
+            const conv = await Currency.convertWithDate(
+              amount,
+              cur,
+              group.currency,
+              date,
+            );
             convAmount = conv.amount;
           }
 
-          Store.appendEvent(group.id, 'ADD_EXPENSE', {
-            title, originalAmount: amount, originalCurrency: cur,
-            groupAmount: convAmount, isPendingRate: false,
-            payer, expenseDate: date, splitMembers: members,
-            rateSnapshot: {}
+          Store.appendEvent(group.id, "ADD_EXPENSE", {
+            title,
+            originalAmount: amount,
+            originalCurrency: cur,
+            groupAmount: convAmount,
+            isPendingRate: false,
+            payer,
+            expenseDate: date,
+            splitMembers: members,
+            rateSnapshot: {},
           });
           importedCount++;
         }
@@ -338,18 +400,17 @@ const App = {
       alert(`Successfully imported ${importedCount} expenses!`);
     };
     reader.readAsText(file);
-    e.target.value = '';
-  }
+    e.target.value = "";
+  },
 };
-
 
 window.App = App;
 window.Export = Export;
 window.CurrencyPicker = CurrencyPicker;
 window.Components = Components;
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => App.init());
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => App.init());
 } else {
   App.init();
 }

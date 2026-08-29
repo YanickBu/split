@@ -61,3 +61,5 @@ const CSVExport = {
   },
 
   }
+
+export default CSVExport;

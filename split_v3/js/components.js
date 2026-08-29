@@ -2,6 +2,24 @@ import Settlement from './settlement.js';
 import Currency from './currency.js';
 
 const Components = {
+
+  renderHome(state) {
+    return `
+      <header>
+        <h1><span class="logo"></span>Split <span>v3</span></h1>
+      </header>
+      <main>
+        <div class="card" style="text-align:center; padding: 40px 20px;">
+          <h2 style="margin-bottom: 20px;">Welcome to Split P2P</h2>
+          <p style="color: var(--text-dim); margin-bottom: 30px;">Create a new group to start tracking expenses with your friends. Data is synced peer-to-peer!</p>
+          <button class="btn-primary" onclick="document.getElementById('newGroupModal').showModal()" style="width: 100%; max-width: 300px; padding: 15px;">
+            + Create New Group
+          </button>
+        </div>
+      </main>
+    `;
+  },
+
   _esc(str) {
     if (!str) return '';
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');

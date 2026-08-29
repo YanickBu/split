@@ -223,7 +223,7 @@ const App = {
 
   showAddExpenseModal() {
     const group = Store.getGroup();
-    const container = document.getElementById("splitMembersContainer");
+    const container = document.getElementById("expenseSplitMembers");
     if (container && group) {
       container.innerHTML = group.members
         .map(
@@ -354,14 +354,29 @@ const App = {
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i].trim();
         if (!row) continue;
-        const cols = row.split(",").map((c) => c.replace(/^"|"$/g, "").trim());
-        if (cols.length >= 6) {
-          const date = cols[0];
-          const title = cols[1];
-          const payer = cols[2];
-          const amount = parseFloat(cols[3]);
-          const cur = cols[4];
-          const members = cols[5].split(";").map((m) => m.trim());
+
+        const cols = [];
+        let inQuotes = false;
+        let curr = "";
+        for (let j = 0; j < row.length; j++) {
+          if (row[j] === '"') inQuotes = !inQuotes;
+          else if (row[j] === "," && !inQuotes) {
+            cols.push(curr.trim().replace(/^"|"$/g, "").replace(/""/g, '"'));
+            curr = "";
+          } else curr += row[j];
+        }
+        cols.push(curr.trim().replace(/^"|"$/g, "").replace(/""/g, '"'));
+
+        if (cols.length >= 7) {
+          const date = cols[1];
+          const title = cols[2];
+          const payer = cols[3];
+          const members = cols[4]
+            .split(",")
+            .map((m) => m.trim())
+            .filter((m) => m);
+          const amount = parseFloat(cols[5]);
+          const cur = cols[6] || group.currency;
 
           if (!payer || !amount || members.length === 0) continue;
 

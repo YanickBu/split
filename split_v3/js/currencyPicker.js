@@ -116,7 +116,11 @@ const CurrencyPicker = {
     const filtered = Currency.search(query);
 
     if (filtered.length === 0) {
-      listEl.innerHTML = `<div class="empty-search">No currencies found matching "${_escHTML(query)}"</div>`;
+      const escapedQuery = query
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      listEl.innerHTML = `<div class="empty-search">No currencies found matching "${escapedQuery}"</div>`;
       return;
     }
 

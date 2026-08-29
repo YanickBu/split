@@ -161,7 +161,7 @@ const App = {
         return;
       }
 
-      appEl.innerHTML = Components.renderDashboard(group);
+      appEl.innerHTML = Components.renderGroupDashboard(group);
       
       // Update header
       document.getElementById('groupTitleDisplay').innerText = group.name;

@@ -27,16 +27,14 @@ const Store = {
     this.currentRoomName = roomName;
 
     this.persistence = new IndexeddbPersistence(roomName, this.ydoc);
-    this.provider = new WebrtcProvider(roomName, this.ydoc, {
-      signaling: ["wss://signaling.yjs.dev"],
-    });
+    this.provider = new WebrtcProvider(roomName, this.ydoc);
 
     this.groupMap = this.ydoc.getMap("group");
     this.eventsArray = this.ydoc.getArray("events");
 
     // Status reporting
     this.provider.on("status", (event) => {
-      const pill = document.getElementById("offlinePill");
+      const pill = document.getElementById("syncPill");
       if (pill) {
         if (event.status === "connected") {
           pill.style.display = "none";

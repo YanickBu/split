@@ -11,11 +11,17 @@ const Store = {
   eventsArray: null,
 
   init(groupId, onUpdate) {
+    const roomName = "split-v3-" + groupId;
+    this._onUpdate = onUpdate;
+
+    if (this.provider && this.provider.roomName === roomName) {
+      return;
+    }
+
     // Cleanup previous if exists
     if (this.provider) this.provider.destroy();
 
     this.ydoc = new Y.Doc();
-    const roomName = "split-v3-" + groupId;
 
     this.persistence = new IndexeddbPersistence(roomName, this.ydoc);
     this.provider = new WebrtcProvider(roomName, this.ydoc, {
@@ -39,9 +45,15 @@ const Store = {
     });
 
     // Observe changes
-    this.groupMap.observe(() => onUpdate());
-    this.eventsArray.observe(() => onUpdate());
-    this.persistence.on("synced", () => onUpdate());
+    this.groupMap.observe(() => {
+      if (this._onUpdate) this._onUpdate();
+    });
+    this.eventsArray.observe(() => {
+      if (this._onUpdate) this._onUpdate();
+    });
+    this.persistence.on("synced", () => {
+      if (this._onUpdate) this._onUpdate();
+    });
   },
 
   getDeviceId() {

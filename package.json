@@ -1,17 +1,10 @@
 {
-  "name": "split-v3-checks",
-  "version": "1.0.0",
-  "description": "Validation tools for Split V3",
-  "scripts": {
-    "lint": "eslint \"split_v3/js/**/*.js\"",
-    "typecheck": "tsc --allowJs --checkJs --noEmit --target es2022 --module es2022 --moduleResolution node split_v3/js/app.js",
-    "format:check": "npx prettier --check \"split_v3/**/*.{js,html,css}\"",
-    "format:write": "npx prettier --write \"split_v3/**/*.{js,html,css}\""
-  },
-  "devDependencies": {
-    "eslint": "^8.57.0",
-    "eslint-plugin-html": "^8.1.1",
-    "prettier": "^3.2.5",
-    "typescript": "^5.4.2"
+  "type": "module",
+  "dependencies": {
+    "fake-indexeddb": "^5.0.2",
+    "ws": "^8.21.3",
+    "y-indexeddb": "^9.0.12",
+    "y-webrtc": "^10.3.0",
+    "yjs": "^13.6.14"
   }
 }

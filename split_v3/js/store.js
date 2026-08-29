@@ -27,7 +27,9 @@ const Store = {
     this.currentRoomName = roomName;
 
     this.persistence = new IndexeddbPersistence(roomName, this.ydoc);
-    this.provider = new WebrtcProvider(roomName, this.ydoc);
+    this.provider = new WebrtcProvider(roomName, this.ydoc, {
+      signaling: ['wss://split-signal-server.onrender.com']
+    });
 
     this.groupMap = this.ydoc.getMap("group");
     this.eventsArray = this.ydoc.getArray("events");

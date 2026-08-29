@@ -82,7 +82,18 @@ const Components = {
     const pendingDeltas = group.pendingDeltas || [];
 
     let html = `
-      <div class="card">
+      <header>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button onclick="App.goHome()" class="btn-icon">←</button>
+          <h1 id="groupTitleDisplay"></h1>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span id="syncPill" class="sync-badge">Connecting...</span>
+          <button class="btn-icon" onclick="document.getElementById('shareModal').showModal()">🔗</button>
+        </div>
+      </header>
+      <main>
+        <div class="card">
         <div class="section-title">Members</div>
         <div class="members-list">
           ${group.members.map(m => `
@@ -158,12 +169,13 @@ const Components = {
         `}
       </div>
 
+      </main>
       <footer class="app-footer" style="display:flex; justify-content:center; gap:8px;">
         <a href="#" class="subtle-link" onclick="event.preventDefault(); window.print(); return false;">export pdf</a>
         <span style="color:var(--text-dim); opacity:0.3; font-size:11px;">•</span>
-        <a href="#" class="subtle-link" onclick="event.preventDefault(); App.exportCSV(event); return false;">export csv</a>
+        <a href="#" class="subtle-link" onclick="event.preventDefault(); Export.exportCSV(window.App, event); return false;">export csv</a>
         <span style="color:var(--text-dim); opacity:0.3; font-size:11px;">•</span>
-        <a href="#" class="subtle-link" onclick="event.preventDefault(); App.importCSV(event); return false;">import csv</a>
+        <a href="#" class="subtle-link" onclick="event.preventDefault(); window.App.importCSV(event); return false;">import csv</a>
       </footer>
     `;
     

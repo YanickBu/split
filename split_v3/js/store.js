@@ -1,5 +1,5 @@
 import * as Y from "https://esm.sh/yjs@13.6.14";
-import { WebrtcProvider } from "https://esm.sh/y-webrtc@10.3.0?deps=yjs@13.6.14";
+import { WebsocketProvider } from "https://esm.sh/y-websocket@2.0.4?deps=yjs@13.6.14";
 import { IndexeddbPersistence } from "https://esm.sh/y-indexeddb@9.0.12?deps=yjs@13.6.14";
 
 const Store = {
@@ -27,9 +27,7 @@ const Store = {
     this.currentRoomName = roomName;
 
     this.persistence = new IndexeddbPersistence(roomName, this.ydoc);
-    this.provider = new WebrtcProvider(roomName, this.ydoc, {
-      signaling: ['wss://split-signal-server.onrender.com']
-    });
+    this.provider = new WebsocketProvider('wss://split-signal-server.onrender.com', roomName, this.ydoc);
 
     this.groupMap = this.ydoc.getMap("group");
     this.eventsArray = this.ydoc.getArray("events");

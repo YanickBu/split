@@ -40,7 +40,7 @@ const Store = {
     this.eventsArray = this.ydoc.getArray("events");
 
     // Status reporting
-    room.subscribe("connection", (status) => {
+    room.subscribe("status", (status) => {
       const pill = document.getElementById("syncPill");
       if (pill) {
         if (status === "connected") {

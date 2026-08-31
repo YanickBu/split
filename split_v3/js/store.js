@@ -1,6 +1,7 @@
 import * as Y from "https://esm.sh/yjs@13.6.14";
-import { WebsocketProvider } from "https://esm.sh/y-websocket@2.0.4?deps=yjs@13.6.14";
 import { IndexeddbPersistence } from "https://esm.sh/y-indexeddb@9.0.12?deps=yjs@13.6.14";
+import { createClient } from "https://esm.sh/@liveblocks/client@2.6.0";
+import { LiveblocksYjsProvider } from "https://esm.sh/@liveblocks/yjs@2.6.0?deps=yjs@13.6.14";
 
 const Store = {
   ydoc: null,
@@ -27,16 +28,22 @@ const Store = {
     this.currentRoomName = roomName;
 
     this.persistence = new IndexeddbPersistence(roomName, this.ydoc);
-    this.provider = new WebsocketProvider('wss://split-signal-server.onrender.com', roomName, this.ydoc);
+    
+    // Liveblocks setup
+    const client = createClient({
+      publicApiKey: "pk_dev_RapxKA-xWsl0m4as-dVuRlRXjPNnVnwzdr0mCZIVyDQCeZ_-T6rWUbsEx96i1A-_"
+    });
+    const { room } = client.enterRoom(roomName);
+    this.provider = new LiveblocksYjsProvider(room, this.ydoc);
 
     this.groupMap = this.ydoc.getMap("group");
     this.eventsArray = this.ydoc.getArray("events");
 
     // Status reporting
-    this.provider.on("status", (event) => {
+    room.subscribe("connection", (status) => {
       const pill = document.getElementById("syncPill");
       if (pill) {
-        if (event.status === "connected") {
+        if (status === "connected") {
           pill.style.display = "none";
         } else {
           pill.style.display = "inline-flex";

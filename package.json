@@ -1,5 +1,9 @@
 {
   "type": "module",
+  "scripts": {
+    "lint": "echo 'No linting configured' && exit 0",
+    "format:check": "echo 'No formatting configured' && exit 0"
+  },
   "dependencies": {
     "fake-indexeddb": "^5.0.2",
     "ws": "^8.21.3",

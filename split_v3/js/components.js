@@ -16,8 +16,11 @@ const Components = {
         <div class="card" style="text-align:center; padding: 40px 20px;">
           <h2 style="margin-bottom: 20px;">Welcome to Split P2P</h2>
           <p style="color: var(--text-dim); margin-bottom: 30px;">Create a new group to start tracking expenses with your friends. Data is synced peer-to-peer!</p>
-          <button class="btn-primary" onclick="document.getElementById('newGroupModal').showModal()" style="width: 100%; max-width: 300px; padding: 15px;">
+          <button class="btn-primary" onclick="document.getElementById('newGroupModal').showModal()" style="width: 100%; max-width: 300px; padding: 15px; margin-bottom: 12px;">
             + Create New Group
+          </button>
+          <button id="installAppBtn" class="btn-secondary" onclick="App.installApp()" style="width: 100%; max-width: 300px; padding: 15px; border: 1px solid var(--accent); background: transparent; color: var(--text); border-radius: 8px;">
+            📱 Install to Home Screen
           </button>
         </div>
 

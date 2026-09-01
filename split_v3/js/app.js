@@ -1,10 +1,10 @@
-import Store from "./store.js?v=3.0.29";
-import Currency from "./currency.js?v=3.0.29";
-import CurrencyPicker from "./currencyPicker.js?v=3.0.29";
-import Components from "./components.js?v=3.0.29";
-import QRCode from "./qrcode.js?v=3.0.29";
-import Export from "./export.js?v=3.0.29";
-import Settlement from "./settlement.js?v=3.0.29";
+import Store from "./store.js?v=3.0.30";
+import Currency from "./currency.js?v=3.0.30";
+import CurrencyPicker from "./currencyPicker.js?v=3.0.30";
+import Components from "./components.js?v=3.0.30";
+import QRCode from "./qrcode.js?v=3.0.30";
+import Export from "./export.js?v=3.0.30";
+import Settlement from "./settlement.js?v=3.0.30";
 //  './export.js?v=3.0.4';
 
 function _escHTML(str) {
@@ -21,13 +21,36 @@ const App = {
   currentGroupId: null,
   lastExpenseCurrency: null,
   lastExpensePayer: null,
+  deferredPrompt: null,
 
   async init() {
+    this.setupPWA();
     this.registerServiceWorker();
     if (typeof Currency !== "undefined") await Currency.fetchRates();
     this.setupRoutes();
     this.setupListeners();
     this.handleHashChange();
+  },
+
+  setupPWA() {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.deferredPrompt = e;
+    });
+
+    window.addEventListener('appinstalled', () => {
+      this.deferredPrompt = null;
+    });
+  },
+
+  async installApp() {
+    if (!this.deferredPrompt) {
+      alert("To install on iOS: Tap the Share button at the bottom of Safari and select 'Add to Home Screen'.\n\nOn Chrome/Android: You may have already installed it, or check your browser menu.");
+      return;
+    }
+    this.deferredPrompt.prompt();
+    const { outcome } = await this.deferredPrompt.userChoice;
+    this.deferredPrompt = null;
   },
 
   registerServiceWorker() {

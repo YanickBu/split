@@ -1,10 +1,10 @@
-import Store from "./store.js?v=3.0.25";
-import Currency from "./currency.js?v=3.0.25";
-import CurrencyPicker from "./currencyPicker.js?v=3.0.25";
-import Components from "./components.js?v=3.0.25";
-import QRCode from "./qrcode.js?v=3.0.25";
-import Export from "./export.js?v=3.0.25";
-import Settlement from "./settlement.js?v=3.0.25";
+import Store from "./store.js?v=3.0.26";
+import Currency from "./currency.js?v=3.0.26";
+import CurrencyPicker from "./currencyPicker.js?v=3.0.26";
+import Components from "./components.js?v=3.0.26";
+import QRCode from "./qrcode.js?v=3.0.26";
+import Export from "./export.js?v=3.0.26";
+import Settlement from "./settlement.js?v=3.0.26";
 //  './export.js?v=3.0.4';
 
 function _escHTML(str) {
@@ -169,6 +169,39 @@ const App = {
     window.location.hash = "";
   },
 
+  saveRecentGroup(group) {
+    if (!group || !group.id || !group.name) return;
+    try {
+      const recent = JSON.parse(localStorage.getItem("split_recent_groups") || "[]");
+      const existingIdx = recent.findIndex((g) => g.id === group.id);
+      const groupData = {
+        id: group.id,
+        name: group.name,
+        currency: group.currency,
+        members: group.members,
+        lastAccessed: Date.now()
+      };
+      if (existingIdx >= 0) {
+        recent[existingIdx] = groupData;
+      } else {
+        recent.push(groupData);
+      }
+      recent.sort((a, b) => b.lastAccessed - a.lastAccessed);
+      localStorage.setItem("split_recent_groups", JSON.stringify(recent));
+    } catch (e) {}
+  },
+
+  removeRecentGroup(id) {
+    if (confirm("Remove this group from your recent list? The group data won't be deleted for others.")) {
+      try {
+        const recent = JSON.parse(localStorage.getItem("split_recent_groups") || "[]");
+        const filtered = recent.filter(g => g.id !== id);
+        localStorage.setItem("split_recent_groups", JSON.stringify(filtered));
+        this.render();
+      } catch (e) {}
+    }
+  },
+
   async render() {
     const appEl = document.getElementById("app");
 
@@ -209,6 +242,7 @@ const App = {
       }
 
       appEl.innerHTML = Components.renderGroupDashboard(group);
+      this.saveRecentGroup(group);
 
       // Update header
       document.getElementById("groupTitleDisplay").innerText = group.name;
@@ -230,7 +264,11 @@ const App = {
         CurrencyPicker.init("expenseCurrency");
       }
     } else {
-      appEl.innerHTML = Components.renderHome({});
+      let recentGroups = [];
+      try {
+        recentGroups = JSON.parse(localStorage.getItem("split_recent_groups") || "[]");
+      } catch (e) {}
+      appEl.innerHTML = Components.renderHome({ recentGroups });
       if (typeof CurrencyPicker !== "undefined") {
         CurrencyPicker.init("groupCurrency");
       }

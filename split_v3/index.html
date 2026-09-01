@@ -43,6 +43,28 @@
     <div id="app"></div>
 
     <!-- Modals -->
+    <dialog id="helpModal">
+      <div class="modal-content">
+        <div class="currency-modal-header">
+          <h2>How it Works</h2>
+          <button type="button" class="btn-icon modal-close-btn" onclick="document.getElementById('helpModal').close()">✕</button>
+        </div>
+        <div style="line-height: 1.6; color: var(--text); padding-top: 10px;">
+          <p style="margin-bottom: 12px;"><b>🔗 Peer-to-Peer Syncing</b><br>
+          Split v3 works entirely peer-to-peer! When you open a group, your phone connects directly to your friends' phones. There are no central servers reading your data.</p>
+          
+          <p style="margin-bottom: 12px;"><b>✈️ Works Offline</b><br>
+          You can add expenses while offline on an airplane or in the mountains. Once you reconnect to the internet and open the app at the same time as a friend, your expenses will magically sync.</p>
+          
+          <p style="margin-bottom: 12px;"><b>💱 Live Exchange Rates</b><br>
+          When you add an expense in a foreign currency, Split instantly converts it to the group's default currency using today's exchange rate. Perfect for international travel.</p>
+          
+          <p><b>📱 Sharing</b><br>
+          Just tap the Share icon 🔗 inside a group to show a QR code or copy a link. Anyone with the link gets full access to the group, so only share it with trusted friends!</p>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="newGroupModal">
       <div class="modal-content">
         <h2>+ New Group</h2>
@@ -317,6 +339,6 @@
     />
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=3.0.25"></script>
+    <script type="module" src="js/app.js?v=3.0.26"></script>
   </body>
 </html>

@@ -2,10 +2,15 @@ import Settlement from "./settlement.js";
 import Currency from "./currency.js";
 
 const Components = {
-  renderHome(_state) {
+  renderHome({ recentGroups = [] }) {
     return `
       <header>
         <h1><span class="logo"></span>Split <span>v3</span></h1>
+        <div class="header-actions">
+          <button class="btn-icon" onclick="document.getElementById('helpModal').showModal()" title="Help / How it Works">
+            ❓
+          </button>
+        </div>
       </header>
       <main>
         <div class="card" style="text-align:center; padding: 40px 20px;">
@@ -15,6 +20,27 @@ const Components = {
             + Create New Group
           </button>
         </div>
+
+        ${recentGroups.length > 0 ? `
+          <div class="section-title" style="margin-top: 10px;">Recent Groups</div>
+          <div class="group-list">
+            ${recentGroups.map(g => `
+              <div class="card clickable group-item" style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="flex:1;" onclick="App.openGroup('${this._esc(g.id)}')">
+                  <div class="group-info">
+                    <h3>${this._esc(g.name)}</h3>
+                    <p>${(g.members || []).length} members • ${this._esc(g.currency)}</p>
+                  </div>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <button class="btn-icon" onclick="event.stopPropagation(); App.removeRecentGroup('${this._esc(g.id)}')">
+                    <span style="color:var(--text-dim); font-size:18px;">×</span>
+                  </button>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
       </main>
     `;
   },

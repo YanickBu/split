@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#000000" />
+    <title>Split Analytics</title>
+    <link rel="stylesheet" href="css/styles.css?v=3.0.0" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+      .analytics-card {
+        margin-bottom: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button id="backBtn" class="btn-icon">←</button>
+          <h1 id="groupTitleDisplay">Analytics</h1>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span id="syncPill" class="sync-badge">Connecting...</span>
+        </div>
+      </header>
+      <main id="analyticsContent" style="display: none;">
+        
+        <div class="card analytics-card">
+          <div class="section-title">Spending Over Time</div>
+          <div class="chart-container">
+            <canvas id="timeChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card analytics-card">
+          <div class="section-title">Spending by Category</div>
+          <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card analytics-card">
+          <div class="section-title">Who Paid What</div>
+          <div class="chart-container">
+            <canvas id="payerChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card analytics-card">
+          <div class="section-title">Currencies Used</div>
+          <div class="chart-container">
+            <canvas id="currencyChart"></canvas>
+          </div>
+        </div>
+
+      </main>
+      <main id="loadingContent">
+        <div style="text-align:center; padding: 40px; color: var(--text-dim)">
+          Loading analytics data...
+        </div>
+      </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/analytics.js?v=1.0.0"></script>
+  </body>
+</html>

@@ -185,7 +185,23 @@ const App = {
               Connecting to P2P Swarm...
             </div>
           </main>`;
+          
+        if (!this._syncInterval) {
+          this._syncInterval = setInterval(() => {
+            const g = Store.getGroup();
+            if (g && g.name) {
+              clearInterval(this._syncInterval);
+              this._syncInterval = null;
+              this.render();
+            }
+          }, 250);
+        }
         return;
+      }
+      
+      if (this._syncInterval) {
+        clearInterval(this._syncInterval);
+        this._syncInterval = null;
       }
 
       appEl.innerHTML = Components.renderGroupDashboard(group);

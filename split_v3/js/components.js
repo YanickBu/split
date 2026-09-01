@@ -303,6 +303,11 @@ const Components = {
       </div>
 
       </main>
+
+      <button class="fab btn-primary" onclick="App.showAddExpenseModal()" title="Add Expense">
+        +
+      </button>
+
       <footer class="app-footer" style="display:flex; justify-content:center; gap:8px;">
         <a href="#" class="subtle-link" onclick="event.preventDefault(); window.print(); return false;">export pdf</a>
         <span style="color:var(--text-dim); opacity:0.3; font-size:11px;">•</span>

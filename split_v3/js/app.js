@@ -1,10 +1,10 @@
-import Store from "./store.js?v=3.0.19";
-import Currency from "./currency.js?v=3.0.19";
-import CurrencyPicker from "./currencyPicker.js?v=3.0.19";
-import Components from "./components.js?v=3.0.19";
-import QRCode from "./qrcode.js?v=3.0.19";
-import Export from "./export.js?v=3.0.19";
-import Settlement from "./settlement.js?v=3.0.19";
+import Store from "./store.js?v=3.0.20";
+import Currency from "./currency.js?v=3.0.20";
+import CurrencyPicker from "./currencyPicker.js?v=3.0.20";
+import Components from "./components.js?v=3.0.20";
+import QRCode from "./qrcode.js?v=3.0.20";
+import Export from "./export.js?v=3.0.20";
+import Settlement from "./settlement.js?v=3.0.20";
 //  './export.js?v=3.0.4';
 
 function _escHTML(str) {
@@ -66,12 +66,14 @@ const App = {
       .getElementById("newGroupForm")
       .addEventListener("submit", async (e) => {
         e.preventDefault();
-        const name = document.getElementById("groupName").value;
+        const name = document.getElementById("groupName").value.trim();
         const currency = document.getElementById("groupCurrency").value;
-        const creator = document.getElementById("creatorName").value;
+        const creator = document.getElementById("creatorName").value.trim();
 
-        const groupId = Store.createGroup(name, currency, creator);
-        window.location.hash = `group=${groupId}`;
+        if (name && creator) {
+          const groupId = Store.createGroup(name, currency, creator);
+          window.location.hash = `group=${groupId}`;
+        }
 
         document.getElementById("newGroupModal").close();
         e.target.reset();
@@ -81,8 +83,10 @@ const App = {
       .getElementById("addMemberForm")
       .addEventListener("submit", async (e) => {
         e.preventDefault();
-        const name = document.getElementById("memberName").value;
-        Store.appendEvent(this.currentGroupId, "ADD_MEMBER", { name });
+        const name = document.getElementById("memberName").value.trim();
+        if (name) {
+          Store.appendEvent(this.currentGroupId, "ADD_MEMBER", { name });
+        }
         document.getElementById("addMemberModal").close();
         e.target.reset();
       });

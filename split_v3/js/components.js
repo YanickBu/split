@@ -215,7 +215,6 @@ const Components = {
             `,
               )
               .join("")}
-            <button class="btn-primary" style="margin-top: 12px; width: 100%" onclick="App.settleUp()">🤝 Settle Up</button>
           </div>
         `
         }

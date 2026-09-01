@@ -58,95 +58,50 @@ const Components = {
   getCategoryEmoji(title) {
     if (!title) return "💸";
     const t = title.toLowerCase();
-    if (
-      t.includes("pizza") ||
-      t.includes("food") ||
-      t.includes("dinner") ||
-      t.includes("lunch") ||
-      t.includes("eat") ||
-      t.includes("restaurant") ||
-      t.includes("burger") ||
-      t.includes("sushi")
-    )
-      return "🍕";
-    if (
-      t.includes("coffee") ||
-      t.includes("cafe") ||
-      t.includes("starbucks") ||
-      t.includes("tea") ||
-      t.includes("snack") ||
-      t.includes("espresso")
-    )
-      return "☕";
-    if (
-      t.includes("beer") ||
-      t.includes("drink") ||
-      t.includes("bar") ||
-      t.includes("cocktail") ||
-      t.includes("wine") ||
-      t.includes("pub") ||
-      t.includes("alcohol")
-    )
-      return "🍺";
-    if (
-      t.includes("uber") ||
-      t.includes("taxi") ||
-      t.includes("cab") ||
-      t.includes("ride") ||
-      t.includes("bus") ||
-      t.includes("train") ||
-      t.includes("metro") ||
-      t.includes("transit")
-    )
-      return "🚖";
-    if (
-      t.includes("grocery") ||
-      t.includes("supermarket") ||
-      t.includes("market") ||
-      t.includes("groceries") ||
-      t.includes("food shopping")
-    )
-      return "🛒";
-    if (
-      t.includes("rent") ||
-      t.includes("airbnb") ||
-      t.includes("hotel") ||
-      t.includes("stay") ||
-      t.includes("hostel") ||
-      t.includes("booking")
-    )
-      return "🏠";
-    if (
-      t.includes("ticket") ||
-      t.includes("movie") ||
-      t.includes("cinema") ||
-      t.includes("concert") ||
-      t.includes("show") ||
-      t.includes("game") ||
-      t.includes("event")
-    )
-      return "🎟️";
-    if (
-      t.includes("flight") ||
-      t.includes("plane") ||
-      t.includes("airline") ||
-      t.includes("fly")
-    )
-      return "✈️";
-    if (
-      t.includes("fuel") ||
-      t.includes("gas") ||
-      t.includes("petrol") ||
-      t.includes("charging")
-    )
-      return "⛽";
-    if (
-      t.includes("shopping") ||
-      t.includes("cloth") ||
-      t.includes("shoes") ||
-      t.includes("apparel")
-    )
-      return "🛍️";
+    
+    // Food & Dining
+    if (t.includes("pizza") || t.includes("burger") || t.includes("sushi") || t.includes("kebab") || t.includes("gyros")) return "🍕";
+    if (t.includes("essen") || t.includes("food") || t.includes("dinner") || t.includes("lunch") || t.includes("meal") || t.includes("restaurant") || t.includes("resti") || t.includes("eat") || t.includes("käse") || t.includes("bürek") || t.includes("wrap")) return "🍽️";
+    
+    // Breakfast & Bakery
+    if (t.includes("frühstück") || t.includes("zmorge") || t.includes("breakfast") || t.includes("bäcker") || t.includes("bakery") || t.includes("baklawa")) return "🥐";
+    
+    // Dessert
+    if (t.includes("glace") || t.includes("ice cream") || t.includes("gelato")) return "🍦";
+
+    // Coffee & Tea
+    if (t.includes("coffee") || t.includes("coffe") || t.includes("kaffe") || t.includes("cafe") || t.includes("tea") || t.includes("espresso") || t.includes("starbucks")) return "☕";
+
+    // Drinks & Alcohol
+    if (t.includes("wine") || t.includes("wein")) return "🍷";
+    if (t.includes("cocktail")) return "🍸";
+    if (t.includes("water") || t.includes("wasser")) return "💧";
+    if (t.includes("bier") || t.includes("beer") || t.includes("drink") || t.includes("getränk") || t.includes("trinken") || t.includes("bar") || t.includes("pub") || t.includes("saufi") || t.includes("alcohol")) return "🍻";
+
+    // Transport & Gas
+    if (t.includes("flight") || t.includes("plane") || t.includes("fly")) return "✈️";
+    if (t.includes("train") || t.includes("bus") || t.includes("metro") || t.includes("transit") || t.includes("ticket")) return "🚆";
+    if (t.includes("uber") || t.includes("taxi") || t.includes("cab") || t.includes("ride")) return "🚖";
+    if (t.includes("fuel") || t.includes("gas") || t.includes("tanken") || t.includes("tanki") || t.includes("tankstelle") || t.includes("benzin") || t.includes("petrol")) return "⛽";
+    if (t.includes("parking") || t.includes("parken") || t.includes("parkplatz")) return "🅿️";
+
+    // Accommodation
+    if (t.includes("hotel") || t.includes("airbnb") || t.includes("stay") || t.includes("hostel") || t.includes("rent")) return "🏠";
+
+    // Activities & Sightseeing
+    if (t.includes("boat") || t.includes("boot")) return "⛵";
+    if (t.includes("kayak")) return "🛶";
+    if (t.includes("burg") || t.includes("palace") || t.includes("castle")) return "🏰";
+    if (t.includes("kirche") || t.includes("church")) return "⛪";
+    if (t.includes("waterfall") || t.includes("wasserfall") || t.includes("nature")) return "🌊";
+    if (t.includes("movie") || t.includes("cinema") || t.includes("concert") || t.includes("museum") || t.includes("tour")) return "🎟️";
+    if (t.includes("hookah") || t.includes("shisha")) return "💨";
+
+    // Shopping & Misc
+    if (t.includes("shopping") || t.includes("cloth") || t.includes("shoes") || t.includes("tshirt") || t.includes("shirt")) return "🛍️";
+    if (t.includes("sim") || t.includes("esim") || t.includes("phone")) return "📱";
+    if (t.includes("abo") || t.includes("premium") || t.includes("subscription")) return "💎";
+
     return "💸";
   },
 

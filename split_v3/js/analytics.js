@@ -1,6 +1,6 @@
-import Store from "./store.js?v=3.0.27";
-import Components from "./components.js?v=3.0.27";
-import Currency from "./currency.js?v=3.0.27";
+import Store from "./store.js?v=3.0.29";
+import Components from "./components.js?v=3.0.29";
+import Currency from "./currency.js?v=3.0.29";
 
 const AnalyticsApp = {
   currentGroupId: null,
@@ -62,7 +62,6 @@ const AnalyticsApp = {
     const expenses = group.events
       .filter((e) => e.type === "ADD_EXPENSE")
       .filter((e) => {
-         // Filter out storno
          const evtId = e.hash || e.id;
          const stornoIds = new Set(
            group.events
@@ -81,13 +80,26 @@ const AnalyticsApp = {
     this.renderCurrencyChart(expenses);
   },
 
+  _normalizeDate(dString, ts) {
+    if (!dString) return new Date(ts).toISOString().split("T")[0];
+    if (dString.includes("/")) {
+      const p = dString.split("/");
+      if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`; // DD/MM/YYYY to YYYY-MM-DD
+    }
+    return dString;
+  },
+
+  _getAmount(e) {
+    const val = e.data.groupAmount ?? e.data.originalAmount ?? e.data.amount;
+    return parseFloat(val) || 0;
+  },
+
   renderTimeChart(expenses, groupCurrency) {
-    // Group by date
     const byDate = {};
     expenses.forEach(e => {
-      const d = e.data.expenseDate || new Date(e.ts).toISOString().split("T")[0];
+      const d = this._normalizeDate(e.data.expenseDate, e.ts);
       if (!byDate[d]) byDate[d] = 0;
-      byDate[d] += parseFloat(e.data.groupAmount) || 0;
+      byDate[d] += this._getAmount(e);
     });
 
     const sortedDates = Object.keys(byDate).sort();
@@ -125,7 +137,7 @@ const AnalyticsApp = {
     expenses.forEach(e => {
       const emoji = Components.getCategoryEmoji(e.data.title);
       if (!byCat[emoji]) byCat[emoji] = 0;
-      byCat[emoji] += parseFloat(e.data.groupAmount) || 0;
+      byCat[emoji] += this._getAmount(e);
     });
 
     const labels = Object.keys(byCat);
@@ -162,7 +174,7 @@ const AnalyticsApp = {
     expenses.forEach(e => {
       const payer = e.data.payer;
       if (!byPayer[payer]) byPayer[payer] = 0;
-      byPayer[payer] += parseFloat(e.data.groupAmount) || 0;
+      byPayer[payer] += this._getAmount(e);
     });
 
     const labels = Object.keys(byPayer);

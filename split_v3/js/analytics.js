@@ -1,6 +1,6 @@
-import Store from "./store.js?v=3.0.24";
-import Components from "./components.js?v=3.0.24";
-import Currency from "./currency.js?v=3.0.24";
+import Store from "./store.js?v=3.0.27";
+import Components from "./components.js?v=3.0.27";
+import Currency from "./currency.js?v=3.0.27";
 
 const AnalyticsApp = {
   currentGroupId: null,

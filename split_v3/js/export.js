@@ -73,9 +73,14 @@ const CSVExport = {
     const safeName = (group.name || "group")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "_");
+      
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const tsStr = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `${safeName}_expenses.csv`);
+    link.setAttribute("download", `${safeName}_expenses_${tsStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

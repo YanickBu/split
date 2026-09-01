@@ -203,6 +203,7 @@ const Components = {
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
           <span id="syncPill" class="sync-badge">Connecting...</span>
+          <button class="btn-icon" onclick="window.location.href='analytics.html#group=' + window.App.currentGroupId" title="Analytics">📊</button>
           <button class="btn-icon" onclick="document.getElementById('shareModal').showModal()">🔗</button>
         </div>
       </header>

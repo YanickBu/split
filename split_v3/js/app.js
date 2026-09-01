@@ -1,10 +1,10 @@
-import Store from "./store.js?v=3.0.26";
-import Currency from "./currency.js?v=3.0.26";
-import CurrencyPicker from "./currencyPicker.js?v=3.0.26";
-import Components from "./components.js?v=3.0.26";
-import QRCode from "./qrcode.js?v=3.0.26";
-import Export from "./export.js?v=3.0.26";
-import Settlement from "./settlement.js?v=3.0.26";
+import Store from "./store.js?v=3.0.27";
+import Currency from "./currency.js?v=3.0.27";
+import CurrencyPicker from "./currencyPicker.js?v=3.0.27";
+import Components from "./components.js?v=3.0.27";
+import QRCode from "./qrcode.js?v=3.0.27";
+import Export from "./export.js?v=3.0.27";
+import Settlement from "./settlement.js?v=3.0.27";
 //  './export.js?v=3.0.4';
 
 function _escHTML(str) {

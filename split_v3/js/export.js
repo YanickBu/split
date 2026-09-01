@@ -1,10 +1,8 @@
-import Store from "./store.js";
-
 const CSVExport = {
   exportCSV(app, e) {
     if (e && e.preventDefault) e.preventDefault();
     if (!app.currentGroupId) return;
-    const group = Store.getGroup();
+    const group = window.Store.getGroup();
     if (!group) return;
 
     const stornoIds = new Set(

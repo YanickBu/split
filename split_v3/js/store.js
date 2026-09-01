@@ -62,6 +62,13 @@ const Store = {
     this.persistence.on("synced", () => {
       if (this._onUpdate) this._onUpdate();
     });
+    
+    // Also trigger update when Liveblocks fully syncs
+    this.provider.on("sync", (isSynced) => {
+      if (isSynced && this._onUpdate) {
+        this._onUpdate();
+      }
+    });
   },
 
   getDeviceId() {

@@ -1,10 +1,10 @@
-import Store from "./store.js?v=3.0.21";
-import Currency from "./currency.js?v=3.0.21";
-import CurrencyPicker from "./currencyPicker.js?v=3.0.21";
-import Components from "./components.js?v=3.0.21";
-import QRCode from "./qrcode.js?v=3.0.21";
-import Export from "./export.js?v=3.0.21";
-import Settlement from "./settlement.js?v=3.0.21";
+import Store from "./store.js?v=3.0.22";
+import Currency from "./currency.js?v=3.0.22";
+import CurrencyPicker from "./currencyPicker.js?v=3.0.22";
+import Components from "./components.js?v=3.0.22";
+import QRCode from "./qrcode.js?v=3.0.22";
+import Export from "./export.js?v=3.0.22";
+import Settlement from "./settlement.js?v=3.0.22";
 //  './export.js?v=3.0.4';
 
 function _escHTML(str) {
@@ -244,17 +244,31 @@ const App = {
   showAddExpenseModal() {
     const group = Store.getGroup();
     const container = document.getElementById("expenseSplitMembers");
-    if (container && group) {
-      container.innerHTML = group.members
-        .map(
-          (m) => `
-        <label class="member-checkbox">
-          <input type="checkbox" class="split-member-checkbox" value="${_escHTML(m)}" checked>
-          <span>${_escHTML(m)}</span>
-        </label>
-      `,
-        )
-        .join("");
+    const payerSelect = document.getElementById("expensePayer");
+    
+    if (group) {
+      if (container) {
+        container.innerHTML = group.members
+          .map(
+            (m) => `
+          <label class="member-checkbox">
+            <input type="checkbox" class="split-member-checkbox" value="${_escHTML(m)}" checked>
+            <span>${_escHTML(m)}</span>
+          </label>
+        `,
+          )
+          .join("");
+      }
+      
+      if (payerSelect) {
+        // Keep the previously selected payer if possible
+        const lastPayer = localStorage.getItem("split_last_expense_payer_" + group.id);
+        payerSelect.innerHTML = group.members
+          .map(
+            (m) => `<option value="${_escHTML(m)}" ${m === lastPayer ? "selected" : ""}>${_escHTML(m)}</option>`
+          )
+          .join("");
+      }
     }
 
     const dateInput = document.getElementById("expenseDate");

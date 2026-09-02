@@ -1,10 +1,10 @@
-import Store from "./store.js?v=3.0.30";
-import Currency from "./currency.js?v=3.0.30";
-import CurrencyPicker from "./currencyPicker.js?v=3.0.30";
-import Components from "./components.js?v=3.0.30";
-import QRCode from "./qrcode.js?v=3.0.30";
-import Export from "./export.js?v=3.0.30";
-import Settlement from "./settlement.js?v=3.0.30";
+import Store from "./store.js?v=3.0.31";
+import Currency from "./currency.js?v=3.0.31";
+import CurrencyPicker from "./currencyPicker.js?v=3.0.31";
+import Components from "./components.js?v=3.0.31";
+import QRCode from "./qrcode.js?v=3.0.31";
+import Export from "./export.js?v=3.0.31";
+import Settlement from "./settlement.js?v=3.0.31";
 //  './export.js?v=3.0.4';
 
 function _escHTML(str) {
@@ -182,6 +182,27 @@ const App = {
         document.getElementById("addExpenseModal").close();
         e.target.reset();
       });
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      
+      const action = btn.getAttribute("data-action");
+      if (action === "stornoExpense") {
+        const id = btn.getAttribute("data-expense-id");
+        if (id) this.voidExpense(id);
+      } else if (action === "removeMember") {
+        const member = btn.getAttribute("data-member");
+        if (member) {
+          if (confirm(`Remove ${member} from the group?`)) {
+            Store.appendEvent(this.currentGroupId, "REMOVE_MEMBER", { name: member });
+          }
+        }
+      } else if (action === "openGroup") {
+        const id = btn.getAttribute("data-id");
+        if (id) this.openGroup(id);
+      }
+    });
   },
 
   openGroup(id) {
@@ -346,8 +367,9 @@ const App = {
         "Are you sure you want to void this expense? This action will be recorded in the ledger.",
       )
     ) {
-      Store.appendEvent(this.currentGroupId, "VOID_EXPENSE", {
+      Store.appendEvent(this.currentGroupId, "STORNO_EXPENSE", {
         targetHash: hash,
+        expenseId: hash,
       });
     }
   },

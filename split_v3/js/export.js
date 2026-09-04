@@ -5,13 +5,7 @@ const CSVExport = {
     const group = window.Store.getGroup();
     if (!group) return;
 
-    const stornoIds = new Set(
-      group.events
-        .filter((evt) => evt.type === "STORNO_EXPENSE")
-        .map((evt) => evt.data && evt.data.expenseId),
-    );
-
-    const expenses = group.events.filter((evt) => evt.type === "ADD_EXPENSE");
+    const expenses = window.Store.getValidExpenses(group);
 
     if (expenses.length === 0) {
       alert("No expenses to export.");
@@ -34,17 +28,9 @@ const CSVExport = {
 
     const rows = expenses.map((evt) => {
       const evtId = evt.hash || evt.id;
-      const isStorno =
-        stornoIds.has(evt.id) ||
-        stornoIds.has(evt.hash) ||
-        stornoIds.has(evtId);
       const isPendingRate = evt.data.isPendingRate;
 
-      const status = isStorno
-        ? "Voided"
-        : isPendingRate
-          ? "Pending Rate"
-          : "Active";
+      const status = isPendingRate ? "Pending Rate" : "Active";
       const dateStr =
         evt.data.expenseDate || new Date(evt.ts).toISOString().split("T")[0];
       const titleEsc = `"${(evt.data.title || "").replace(/"/g, '""')}"`;

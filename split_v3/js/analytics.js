@@ -59,17 +59,7 @@ const AnalyticsApp = {
   },
 
   renderCharts(group) {
-    const expenses = group.events
-      .filter((e) => e.type === "ADD_EXPENSE")
-      .filter((e) => {
-         const evtId = e.hash || e.id;
-         const stornoIds = new Set(
-           group.events
-             .filter((x) => x.type === "STORNO_EXPENSE")
-             .map((x) => x.data && x.data.expenseId)
-         );
-         return !stornoIds.has(e.id) && !stornoIds.has(e.hash) && !stornoIds.has(evtId);
-      });
+    const expenses = Store.getValidExpenses(group);
 
     Chart.defaults.color = '#fff';
     Chart.defaults.scale.grid.color = '#222';

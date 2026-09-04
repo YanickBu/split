@@ -7,24 +7,10 @@ const Settlement = {
     const balances = {};
     group.members.forEach((m) => (balances[m] = 0));
 
-    // Storno voided expenses map (by id and hash)
-    const voidedIds = new Set();
-    (group.events || []).forEach((evt) => {
-      if (evt.type === "STORNO_EXPENSE" && evt.data && evt.data.expenseId) {
-        voidedIds.add(evt.data.expenseId);
-      }
-    });
+    const validExpenses = Store.getValidExpenses(group);
 
-    (group.events || []).forEach((evt) => {
+    validExpenses.forEach((evt) => {
       if (evt.type === "ADD_EXPENSE" && evt.data) {
-        const evtId = evt.hash || evt.id;
-        if (
-          voidedIds.has(evt.id) ||
-          voidedIds.has(evt.hash) ||
-          voidedIds.has(evtId)
-        ) {
-          return; // Skip voided expense
-        }
 
         const payer = evt.data.payer;
         const amount = roundToTwoDecimals(

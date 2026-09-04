@@ -136,21 +136,11 @@ const Components = {
   },
 
   renderGroupDashboard(group) {
+    if (!group) return "";
+
     const balances = Settlement.calculateBalances(group);
     const settlements = Settlement.calculateSettlements(balances);
-
-    // Sort expenses newest first
-    const expenses = group.events
-      .filter((e) => e.type === "ADD_EXPENSE")
-      .sort((a, b) => b.ts - a.ts);
-
-    // Find stornoed
-    const stornoIds = new Set(
-      group.events
-        .filter((e) => e.type === "STORNO_EXPENSE")
-        .map((e) => e.data && e.data.expenseId),
-    );
-
+    const expenses = Store.getValidExpenses(group).sort((a, b) => b.ts - a.ts);
     const pendingDeltas = group.pendingDeltas || [];
 
     let html = `
@@ -215,10 +205,6 @@ const Components = {
             ${expenses
               .map((e) => {
                 const evtId = e.hash || e.id;
-                const isStorno =
-                  stornoIds.has(e.id) ||
-                  stornoIds.has(e.hash) ||
-                  stornoIds.has(evtId);
                 const origAmount = Currency.format(
                   e.data.originalAmount,
                   e.data.originalCurrency,
@@ -230,7 +216,6 @@ const Components = {
                   pendingDeltas.includes(evtId) ||
                   pendingDeltas.includes(e.hash) ||
                   pendingDeltas.includes(e.id);
-                const strikethroughClass = isStorno ? "strikethrough" : "";
                 const emoji = this.getCategoryEmoji(e.data.title);
 
                 // Subgroup split details
@@ -247,36 +232,28 @@ const Components = {
                       e.data.expenseDate + "T00:00:00",
                     ).toLocaleDateString()
                   : new Date(e.ts).toLocaleDateString();
+                const editedBadge = e.isEdited ? `<span class="edited-badge" title="This expense was modified">✏️</span>` : "";
 
                 return `
-              <div class="expense-item ${isStorno ? "storno" : ""}">
+              <div class="expense-item">
                 <div class="expense-info">
-                  <h4 class="${strikethroughClass}">
+                  <h4>
                     <span>${emoji} ${this._esc(e.data.title)}</span>
                     ${isPendingDelta ? `<span class="sync-badge pending">⏳ Pending</span>` : ""}
                   </h4>
-                  <div class="expense-meta ${strikethroughClass}">${this._esc(e.data.payer)}${subgroupText} • ${displayDate}</div>
+                  <div class="expense-meta">${this._esc(e.data.payer)}${subgroupText} • ${displayDate} ${editedBadge}</div>
                 </div>
                 <div class="expense-right">
-                  <div class="expense-amounts ${strikethroughClass}">
+                  <div class="expense-amounts">
                     ${
-                      isDiffCurrency
-                        ? `
-                      <div class="expense-amount-primary ${strikethroughClass}">${isPendingRate ? "⏳ Rate pending" : `≈ ${Currency.format(e.data.groupAmount, group.currency)}`}</div>
-                      <div class="expense-amount-secondary ${strikethroughClass}">${origAmount} ${this._esc(e.data.originalCurrency)}</div>
-                    `
-                        : `
-                      <div class="expense-amount-primary ${strikethroughClass}">${origAmount}</div>
-                    `
+                      isPendingRate
+                        ? `<div class="expense-amount-primary">Rate pending...</div>`
+                        : `<div class="expense-amount-primary">${isDiffCurrency ? "≈ " : ""}${Currency.format(e.data.groupAmount, group.currency)}</div>`
                     }
+                    ${isDiffCurrency ? `<div class="expense-amount-secondary">${origAmount} ${this._esc(e.data.originalCurrency)}</div>` : ""}
                   </div>
-                  ${
-                    !isStorno
-                      ? `
-                    <button class="expense-void-btn" title="Void expense" data-action="stornoExpense" data-expense-id="${this._esc(evtId)}">✕</button>
-                  `
-                      : ""
-                  }
+                  <button class="expense-void-btn edit" title="Edit expense" data-action="editExpense" data-expense-id="${this._esc(evtId)}">✏️</button>
+                  <button class="expense-void-btn" title="Void expense" data-action="stornoExpense" data-expense-id="${this._esc(evtId)}">✕</button>
                 </div>
               </div>
             `;

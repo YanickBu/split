@@ -1,10 +1,10 @@
-import Store from "./store.js?v=3.0.31";
-import Currency from "./currency.js?v=3.0.31";
-import CurrencyPicker from "./currencyPicker.js?v=3.0.31";
-import Components from "./components.js?v=3.0.31";
-import QRCode from "./qrcode.js?v=3.0.31";
-import Export from "./export.js?v=3.0.31";
-import Settlement from "./settlement.js?v=3.0.31";
+import Store from "./store.js?v=3.0.32";
+import Currency from "./currency.js?v=3.0.32";
+import CurrencyPicker from "./currencyPicker.js?v=3.0.32";
+import Components from "./components.js?v=3.0.32";
+import QRCode from "./qrcode.js?v=3.0.32";
+import Export from "./export.js?v=3.0.32";
+import Settlement from "./settlement.js?v=3.0.32";
 //  './export.js?v=3.0.4';
 
 function _escHTML(str) {
@@ -125,6 +125,7 @@ const App = {
         const currency = document.getElementById("expenseCurrency").value;
         const payer = document.getElementById("expensePayer").value;
         const expenseDate = document.getElementById("expenseDate").value;
+        const editExpenseId = document.getElementById("editExpenseId") ? document.getElementById("editExpenseId").value : "";
 
         const group = Store.getGroup();
         if (!group) return;
@@ -167,7 +168,7 @@ const App = {
           rateSnap = Currency.rates;
         }
 
-        Store.appendEvent(this.currentGroupId, "ADD_EXPENSE", {
+        const expensePayload = {
           title,
           originalAmount: amount,
           originalCurrency: currency,
@@ -177,10 +178,20 @@ const App = {
           expenseDate,
           splitMembers,
           rateSnapshot: rateSnap,
-        });
+        };
+
+        if (editExpenseId) {
+          Store.appendEvent(this.currentGroupId, "EDIT_EXPENSE", {
+            targetHash: editExpenseId,
+            changes: expensePayload
+          });
+        } else {
+          Store.appendEvent(this.currentGroupId, "ADD_EXPENSE", expensePayload);
+        }
 
         document.getElementById("addExpenseModal").close();
         e.target.reset();
+        if (document.getElementById("editExpenseId")) document.getElementById("editExpenseId").value = "";
       });
 
     document.addEventListener("click", (e) => {
@@ -191,6 +202,9 @@ const App = {
       if (action === "stornoExpense") {
         const id = btn.getAttribute("data-expense-id");
         if (id) this.voidExpense(id);
+      } else if (action === "editExpense") {
+        const id = btn.getAttribute("data-expense-id");
+        if (id) this.editExpense(id);
       } else if (action === "removeMember") {
         const member = btn.getAttribute("data-member");
         if (member) {
@@ -343,7 +357,6 @@ const App = {
       }
       
       if (payerSelect) {
-        // Keep the previously selected payer if possible
         const lastPayer = localStorage.getItem("split_last_expense_payer_" + group.id);
         payerSelect.innerHTML = group.members
           .map(
@@ -357,8 +370,47 @@ const App = {
     if (dateInput) {
       dateInput.value = new Date().toISOString().split("T")[0];
     }
+    
+    if (document.getElementById("editExpenseId")) document.getElementById("editExpenseId").value = "";
 
     document.getElementById("addExpenseModal").showModal();
+  },
+
+  editExpense(hash) {
+    const group = Store.getGroup();
+    if (!group) return;
+    
+    const validExpenses = Store.getValidExpenses(group);
+    const expense = validExpenses.find(e => e.hash === hash || e.id === hash);
+    if (!expense) return;
+
+    this.showAddExpenseModal();
+
+    // After showAddExpenseModal sets defaults, override with original data
+    document.getElementById("editExpenseId").value = hash;
+    document.getElementById("expenseTitle").value = expense.data.title;
+    document.getElementById("expenseAmount").value = expense.data.originalAmount;
+    
+    if (document.getElementById("expenseCurrency")) {
+      document.getElementById("expenseCurrency").value = expense.data.originalCurrency;
+    }
+    
+    if (document.getElementById("expensePayer")) {
+      const payerSelect = document.getElementById("expensePayer");
+      payerSelect.innerHTML = group.members.map(
+        m => `<option value="${_escHTML(m)}" ${m === expense.data.payer ? "selected" : ""}>${_escHTML(m)}</option>`
+      ).join("");
+    }
+    
+    if (document.getElementById("expenseDate") && expense.data.expenseDate) {
+      document.getElementById("expenseDate").value = expense.data.expenseDate;
+    }
+
+    // Set split checkboxes
+    const checkboxes = document.querySelectorAll(".split-member-checkbox");
+    checkboxes.forEach(cb => {
+      cb.checked = expense.data.splitMembers.includes(cb.value);
+    });
   },
 
   voidExpense(hash) {

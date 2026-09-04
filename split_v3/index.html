@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#000000" />
     <title>Split</title>
     <link rel="manifest" href="manifest.json" />
-    <link rel="stylesheet" href="css/styles.css?v=3.0.0" />
+    <link rel="stylesheet" href="css/styles.css?v=3.0.1" />
     <script>
       window.addEventListener("error", function (e) {
         if (document.body) {
@@ -136,6 +136,7 @@
       <div class="modal-content">
         <h2>Add Expense</h2>
         <form id="addExpenseForm">
+          <input type="hidden" id="editExpenseId" />
           <label for="expenseTitle">Title</label>
           <input
             type="text"
@@ -339,6 +340,6 @@
     />
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=3.0.31"></script>
+    <script type="module" src="js/app.js?v=3.0.32"></script>
   </body>
 </html>

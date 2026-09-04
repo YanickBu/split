@@ -193,6 +193,43 @@ const Store = {
 
     return evt;
   },
+
+  getValidExpenses(group) {
+    if (!group || !group.events) return [];
+    const stornoIds = new Set();
+    const editsByTarget = {};
+
+    group.events.forEach((x) => {
+      if (x.type === "STORNO_EXPENSE" && x.data) {
+        if (x.data.targetHash) stornoIds.add(x.data.targetHash);
+        if (x.data.expenseId) stornoIds.add(x.data.expenseId);
+      }
+      if (x.type === "EDIT_EXPENSE" && x.data && x.data.targetHash) {
+        if (!editsByTarget[x.data.targetHash]) editsByTarget[x.data.targetHash] = [];
+        editsByTarget[x.data.targetHash].push(x);
+      }
+    });
+
+    return group.events
+      .filter((e) => e.type === "ADD_EXPENSE")
+      .filter((e) => {
+        const evtId = e.hash || e.id;
+        return !stornoIds.has(e.id) && !stornoIds.has(e.hash) && !stornoIds.has(evtId);
+      })
+      .map((e) => {
+        const evtId = e.hash || e.id;
+        const edits = editsByTarget[evtId] || [];
+        if (edits.length > 0) {
+          edits.sort((a, b) => a.ts - b.ts);
+          const finalData = { ...e.data };
+          edits.forEach((edit) => {
+            Object.assign(finalData, edit.data.changes);
+          });
+          return { ...e, data: finalData, isEdited: true };
+        }
+        return e;
+      });
+  },
 };
 
 window.Store = Store; // Expose globally for components.js

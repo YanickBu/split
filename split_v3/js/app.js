@@ -1,10 +1,10 @@
-import Store from "./store.js?v=3.0.32";
-import Currency from "./currency.js?v=3.0.32";
-import CurrencyPicker from "./currencyPicker.js?v=3.0.32";
-import Components from "./components.js?v=3.0.32";
-import QRCode from "./qrcode.js?v=3.0.32";
-import Export from "./export.js?v=3.0.32";
-import Settlement from "./settlement.js?v=3.0.32";
+import Store from "./store.js?v=3.0.33";
+import Currency from "./currency.js?v=3.0.33";
+import CurrencyPicker from "./currencyPicker.js?v=3.0.33";
+import Components from "./components.js?v=3.0.33";
+import QRCode from "./qrcode.js?v=3.0.33";
+import Export from "./export.js?v=3.0.33";
+import Settlement from "./settlement.js?v=3.0.33";
 //  './export.js?v=3.0.4';
 
 function _escHTML(str) {
@@ -391,7 +391,9 @@ const App = {
     document.getElementById("expenseTitle").value = expense.data.title;
     document.getElementById("expenseAmount").value = expense.data.originalAmount;
     
-    if (document.getElementById("expenseCurrency")) {
+    if (document.getElementById("expenseCurrency") && typeof CurrencyPicker !== "undefined") {
+      CurrencyPicker.setButtonValue("expenseCurrency", "expenseCurrencyBtn", expense.data.originalCurrency);
+    } else if (document.getElementById("expenseCurrency")) {
       document.getElementById("expenseCurrency").value = expense.data.originalCurrency;
     }
     

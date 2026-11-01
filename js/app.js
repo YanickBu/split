@@ -86,14 +86,19 @@ const App = {
 
     // Resolve any offline pending exchange rates across all groups (fixed: for..of instead of forEach)
     for (const group of Object.values(State.data.groups)) {
-      for (const evt of group.events) {
-        if (evt.type === 'ADD_EXPENSE' && evt.data && evt.data.isPendingRate) {
+      for (const evt of State.getExpenses(group)) {
+        if (evt.data && evt.data.isPendingRate) {
           const dateStr = evt.data.expenseDate || new Date(evt.ts).toISOString().split('T')[0];
           const conv = await Currency.convertWithDate(evt.data.originalAmount, evt.data.originalCurrency, group.currency, dateStr);
-          if (!conv.isPending) {
-            evt.data.groupAmount = conv.amount;
-            evt.data.isPendingRate = false;
-            evt.data.rateSnapshot = Currency.rates;
+          const expenseId = evt.hash || evt.id;
+          const stillPending = State.getExpenses(State.getGroup(group.id))
+            .some(current => (current.hash || current.id) === expenseId && current.data.isPendingRate);
+          if (!conv.isPending && Number.isFinite(conv.amount) && stillPending) {
+            State.appendEvent(group.id, 'RATE_RESOLVED', {
+              expenseId,
+              groupAmount: conv.amount,
+              rateSnapshot: Currency.rates
+            });
             updatedPending = true;
           }
         }
@@ -107,17 +112,12 @@ const App = {
         for (const evtHash of [...pendingDeltas]) {
           const evt = group.events.find(e => (e.hash === evtHash || e.id === evtHash));
           if (evt) {
-            const pubOk = await EventSourcing.publish(group.id, evt);
-            if (pubOk) {
-              State.resolvePendingDelta(group.id, evtHash);
-              State.resolvePendingDelta(group.id, evt.id);
-              State.resolvePendingDelta(group.id, evt.hash);
-              updatedPending = true;
-            }
+            await EventSourcing.publish(group.id, evt);
           }
         }
         
-        // If ntfy rate limited us, but jsonbin successfully saved the full snapshot, we can clear pending deltas
+        // A live ntfy message is temporary; persist the merged ledger before
+        // clearing pending events.
         await this.syncGroupFromCloud(group.id);
         const binSynced = await JSONBin.sync(State.getGroup(group.id));
         if (binSynced && State.getGroup(group.id).pendingDeltas.length > 0) {
@@ -146,7 +146,7 @@ const App = {
   async publishAndSync(groupId, evt) {
     if (!groupId || !evt) return;
     // Attempt publish to real-time pubsub stream
-    const pubOk = await EventSourcing.publish(groupId, evt);
+    await EventSourcing.publish(groupId, evt);
     
     // Merge remote events before writing a full snapshot. A stale device must
     // not replace another device's edits when it reconnects.
@@ -154,7 +154,7 @@ const App = {
     const binOk = await JSONBin.sync(State.getGroup(groupId));
 
     // If successfully delivered to cloud, mark event as synced immediately
-    if (pubOk || binOk) {
+    if (binOk) {
       State.resolvePendingDelta(groupId, evt.hash);
       State.resolvePendingDelta(groupId, evt.id);
       if (this.currentGroupId === groupId) {
@@ -213,7 +213,8 @@ const App = {
           history.forEach(remoteEvt => {
             const hashKey = remoteEvt.hash || remoteEvt.id;
             
-            if (group.pendingDeltas && (group.pendingDeltas.includes(hashKey) || group.pendingDeltas.includes(remoteEvt.id) || group.pendingDeltas.includes(remoteEvt.hash))) {
+            if (history._durableIds?.has(hashKey) && group.pendingDeltas &&
+                (group.pendingDeltas.includes(hashKey) || group.pendingDeltas.includes(remoteEvt.id) || group.pendingDeltas.includes(remoteEvt.hash))) {
               State.resolvePendingDelta(groupId, hashKey);
               State.resolvePendingDelta(groupId, remoteEvt.id);
               State.resolvePendingDelta(groupId, remoteEvt.hash);
@@ -313,10 +314,6 @@ const App = {
       let addedAny = false;
       evt.groupState.events.forEach(remoteEvt => {
         const hashKey = remoteEvt.hash || remoteEvt.id;
-        if (group.pendingDeltas && group.pendingDeltas.includes(hashKey)) {
-          State.resolvePendingDelta(this.currentGroupId, hashKey);
-          addedAny = true;
-        }
         const exists = group.events.some(e => (e.hash === hashKey || e.id === hashKey));
         if (!exists && remoteEvt.type) {
           remoteEvt.synced = true;
@@ -334,12 +331,6 @@ const App = {
 
     // Handle regular transaction event
     const evtHash = evt.hash || evt.id;
-    if (group.pendingDeltas && (group.pendingDeltas.includes(evtHash) || group.pendingDeltas.includes(evt.id) || group.pendingDeltas.includes(evt.hash))) {
-      State.resolvePendingDelta(this.currentGroupId, evtHash);
-      State.resolvePendingDelta(this.currentGroupId, evt.id);
-      State.resolvePendingDelta(this.currentGroupId, evt.hash);
-    }
-
     const existing = group.events.find(e => (e.hash === evtHash || e.id === evtHash));
     if (!existing && evt.type) {
       evt.synced = true;
@@ -411,7 +402,8 @@ const App = {
       const activeMemberChips = document.querySelectorAll('#expenseSplitMembers .member-split-chip.active');
       let splitMembers = Array.from(activeMemberChips).map(c => c.getAttribute('data-member'));
       
-      const group = State.getGroup(this.currentGroupId);
+      const groupId = this.currentGroupId;
+      const group = State.getGroup(groupId);
       if (splitMembers.length === 0) {
         splitMembers = group.members;
       }
@@ -439,8 +431,9 @@ const App = {
       
       // Convert currency using historical rate for selected expense date
       const conv = await Currency.convertWithDate(amount, currency, group.currency, expenseDate);
+      if (this.currentGroupId !== groupId || !State.getGroup(groupId)) return;
       
-      const evt = State.appendEvent(this.currentGroupId, 'ADD_EXPENSE', {
+      const evt = State.appendEvent(groupId, 'ADD_EXPENSE', {
         title,
         originalAmount: amount,
         originalCurrency: currency,
@@ -456,7 +449,7 @@ const App = {
       e.target.reset();
       this.render();
       
-      await this.publishAndSync(this.currentGroupId, evt);
+      await this.publishAndSync(groupId, evt);
     });
     
     // Quick Chips
@@ -669,7 +662,7 @@ const App = {
       group.events.filter(evt => evt.type === 'STORNO_EXPENSE').map(evt => evt.data && evt.data.expenseId)
     );
 
-    const expenses = group.events.filter(evt => evt.type === 'ADD_EXPENSE');
+    const expenses = State.getExpenses(group);
     
     if (expenses.length === 0) {
       alert("No expenses to export.");

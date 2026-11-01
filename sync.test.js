@@ -76,3 +76,17 @@ test("equal timestamp ledger events replay in the same order on every device", (
     assert.deepEqual(Array.from(state.data.groups.trip.members), ["Alice"]);
   }
 });
+
+test("live delivery alone keeps an event pending for durable retry", async () => {
+  const event = { id: "expense-1", hash: "expense-1", type: "ADD_EXPENSE" };
+  const group = { id: "group-1", events: [event], pendingDeltas: ["expense-1"] };
+  const context = createApp({ "group-1": group });
+  const app = context.testApp;
+  context.EventSourcing.publish = async () => true;
+  context.JSONBin.sync = async () => false;
+  app.syncGroupFromCloud = async () => {};
+
+  await app.publishAndSync("group-1", event);
+  assert.deepEqual(group.pendingDeltas, ["expense-1"]);
+  assert.equal(app._retryTimerId, 1);
+});

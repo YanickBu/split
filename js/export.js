@@ -9,7 +9,7 @@ const CSVExport = {
       group.events.filter(evt => evt.type === 'STORNO_EXPENSE').map(evt => evt.data && evt.data.expenseId)
     );
 
-    const expenses = group.events.filter(evt => evt.type === 'ADD_EXPENSE');
+    const expenses = State.getExpenses(group);
     
     if (expenses.length === 0) {
       alert("No expenses to export.");

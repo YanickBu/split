@@ -17,6 +17,7 @@ const JSONBin = {
 
     let ntfyOk = false;
     let jsonbinOk = false;
+    let needsPing = false;
 
     // 1. Send to ntfy.sh for real-time live sync (ephemeral, 12h)
     try {
@@ -34,12 +35,7 @@ const JSONBin = {
       });
       ntfyOk = res.ok;
       if (!ntfyOk && res.status === 413) {
-        // Payload too large! Send a lightweight ping so live clients know to fetch from jsonbin
-        fetch(`https://ntfy.sh/${cloudId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'PING_SYNC', groupId: group.id, timestamp: Date.now() })
-        }).catch(() => {});
+        needsPing = true;
       }
     } catch (err) {
       console.warn('[JSONBin] ntfy.sh sync failed:', err);
@@ -97,7 +93,21 @@ const JSONBin = {
       }
     }
 
-    return ntfyOk || jsonbinOk;
+    if (needsPing && jsonbinOk) {
+      // Tell live clients to fetch only after the new snapshot is persisted.
+      try {
+        await fetch('https://ntfy.sh/' + cloudId, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'PING_SYNC', groupId: group.id, timestamp: Date.now() })
+        });
+      } catch (err) {
+        console.warn('[JSONBin] ntfy.sh ping failed:', err);
+      }
+    }
+
+    // ntfy messages expire; only the persistent write can clear a pending event.
+    return jsonbinOk;
   },
 
   async fetchGroupHistory(groupId) {
@@ -105,6 +115,7 @@ const JSONBin = {
     const cloudId = `${this.PREFIX}${groupId}`;
     
     const eventsById = new Map();
+    const durableIds = new Set();
     let snapshotGroup = null;
     let snapshotTimestamp = 0;
     let hasPersistentSnapshot = false;
@@ -131,6 +142,10 @@ const JSONBin = {
               snapshotGroup = data.record;
               hasPersistentSnapshot = true;
               addEvents(snapshotGroup.events);
+              snapshotGroup.events.forEach(evt => {
+                const id = evt.hash || evt.id;
+                if (id) durableIds.add(id);
+              });
               console.log('[JSONBin] Loaded group from jsonbin.io, events:', snapshotGroup.events.length);
             }
           }
@@ -155,6 +170,10 @@ const JSONBin = {
                     snapshotGroup = binData.record;
                     hasPersistentSnapshot = true;
                     addEvents(snapshotGroup.events);
+                    snapshotGroup.events.forEach(evt => {
+                      const id = evt.hash || evt.id;
+                      if (id) durableIds.add(id);
+                    });
                     console.log('[JSONBin] Found and loaded group from jsonbin.io search, events:', snapshotGroup.events.length);
                   }
                 }
@@ -204,6 +223,7 @@ const JSONBin = {
 
     const events = [...eventsById.values()];
     if (snapshotGroup) events._snapshotGroup = snapshotGroup;
+    events._durableIds = durableIds;
     return events;
   }
 };

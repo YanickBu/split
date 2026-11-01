@@ -49,8 +49,7 @@ const UIComponents = {
     const settlements = Settlement.calculateSettlements(balances);
     
     // Sort expenses newest first
-    const expenses = group.events
-      .filter(e => e.type === 'ADD_EXPENSE')
+    const expenses = State.getExpenses(group)
       .sort((a, b) => b.ts - a.ts);
       
     // Find stornoed

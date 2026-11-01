@@ -13,8 +13,8 @@ const Settlement = {
       }
     });
 
-    (group.events || []).forEach(evt => {
-      if (evt.type === 'ADD_EXPENSE' && evt.data) {
+    State.getExpenses(group).forEach(evt => {
+      if (evt.data) {
         const evtId = evt.hash || evt.id;
         if (voidedIds.has(evt.id) || voidedIds.has(evt.hash) || voidedIds.has(evtId)) {
           return; // Skip voided expense

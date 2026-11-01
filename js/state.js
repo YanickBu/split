@@ -139,6 +139,36 @@ const State = {
     }
   },
 
+  getExpenses(group) {
+    if (!group || !Array.isArray(group.events)) return [];
+    const resolutions = new Map();
+    group.events.forEach(evt => {
+      if (evt.type !== 'RATE_RESOLVED' || !evt.data) return;
+      const { expenseId, groupAmount } = evt.data;
+      if (!expenseId || !Number.isFinite(groupAmount)) return;
+      const previous = resolutions.get(expenseId);
+      const currentId = String(evt.hash || evt.id || '');
+      const previousId = previous && String(previous.hash || previous.id || '');
+      if (!previous || evt.ts > previous.ts || (evt.ts === previous.ts && currentId > previousId)) {
+        resolutions.set(expenseId, evt);
+      }
+    });
+
+    return group.events.filter(evt => evt.type === 'ADD_EXPENSE').map(evt => {
+      const resolution = resolutions.get(evt.hash || evt.id);
+      if (!resolution) return evt;
+      return {
+        ...evt,
+        data: {
+          ...evt.data,
+          groupAmount: resolution.data.groupAmount,
+          isPendingRate: false,
+          rateSnapshot: resolution.data.rateSnapshot
+        }
+      };
+    });
+  },
+
   resolvePendingDelta(groupId, eventIdentifier) {
     const group = this.getGroup(groupId);
     if (!group) return;

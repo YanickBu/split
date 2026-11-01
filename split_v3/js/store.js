@@ -2,6 +2,7 @@ import * as Y from "https://esm.sh/yjs@13.6.14";
 import { IndexeddbPersistence } from "https://esm.sh/y-indexeddb@9.0.12?deps=yjs@13.6.14";
 import { createClient } from "https://esm.sh/@liveblocks/client@2.6.0";
 import { LiveblocksYjsProvider } from "https://esm.sh/@liveblocks/yjs@2.6.0?deps=yjs@13.6.14";
+import { deriveMembers } from "./members.js";
 
 const Store = {
   ydoc: null,
@@ -12,6 +13,11 @@ const Store = {
   eventsArray: null,
 
   currentRoomName: null,
+  connectionStatus: "connecting",
+
+  eventNonce() {
+    return globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  },
 
   init(groupId, onUpdate) {
     const roomName = "split-v3-" + groupId;
@@ -26,6 +32,7 @@ const Store = {
 
     this.ydoc = new Y.Doc();
     this.currentRoomName = roomName;
+    this.connectionStatus = "connecting";
 
     this.persistence = new IndexeddbPersistence(roomName, this.ydoc);
     
@@ -41,15 +48,8 @@ const Store = {
 
     // Status reporting
     room.subscribe("status", (status) => {
-      const pill = document.getElementById("syncPill");
-      if (pill) {
-        if (status === "connected") {
-          pill.style.display = "none";
-        } else {
-          pill.style.display = "inline-flex";
-          pill.innerText = "Offline";
-        }
-      }
+      this.connectionStatus = status;
+      this.updateSyncPill();
     });
 
     // Observe changes
@@ -71,6 +71,13 @@ const Store = {
     });
   },
 
+  updateSyncPill() {
+    const pill = document.getElementById("syncPill");
+    if (!pill) return;
+    pill.style.display = this.connectionStatus === "connected" ? "none" : "inline-flex";
+    pill.innerText = this.connectionStatus === "connecting" ? "Connecting..." : "Offline";
+  },
+
   getDeviceId() {
     let id = localStorage.getItem("split_device_id");
     if (!id) {
@@ -80,8 +87,8 @@ const Store = {
     return id;
   },
 
-  generateEventHash(groupId, type, ts, data, prevHash, source) {
-    const str = `${groupId}:${type}:${ts}:${JSON.stringify(data)}:${prevHash}:${source}`;
+  generateEventHash(groupId, type, ts, data, prevHash, source, nonce = "") {
+    const str = `${groupId}:${type}:${ts}:${JSON.stringify(data)}:${prevHash}:${source}:${nonce}`;
     let h1 = 0xdeadbeef ^ 0,
       h2 = 0x41c6ce57 ^ 0;
     for (let i = 0, ch; i < str.length; i++) {
@@ -115,6 +122,7 @@ const Store = {
 
     const ts = Date.now();
     const source = this.getDeviceId();
+    const nonce = this.eventNonce();
     const hash = this.generateEventHash(
       id,
       "INIT",
@@ -122,6 +130,7 @@ const Store = {
       { name, currency, creator: creatorName },
       "",
       source,
+      nonce,
     );
 
     const initEvt = {
@@ -131,6 +140,7 @@ const Store = {
       type: "INIT",
       ts: ts,
       source: source,
+      nonce,
       data: { name, currency, creator: creatorName },
       synced: true, // Yjs inherently syncs
     };
@@ -141,18 +151,21 @@ const Store = {
 
   getGroup() {
     if (!this.groupMap || !this.groupMap.get("id")) return null;
+    const events = this.eventsArray ? this.eventsArray.toArray() : [];
     return {
       id: this.groupMap.get("id"),
       name: this.groupMap.get("name"),
       currency: this.groupMap.get("currency"),
-      members: this.groupMap.get("members") || [],
-      events: this.eventsArray ? this.eventsArray.toArray() : [],
+      members: deriveMembers(events, this.groupMap.get("members") || []),
+      events,
     };
   },
 
   appendEvent(groupId, type, data) {
+    if (!this.groupMap || this.groupMap.get("id") !== groupId || !this.eventsArray) return null;
     const ts = Date.now();
     const source = this.getDeviceId();
+    const nonce = this.eventNonce();
     const events = this.eventsArray.toArray();
     const prevHash = events.length > 0 ? events[events.length - 1].hash : "";
     const hash = this.generateEventHash(
@@ -162,6 +175,7 @@ const Store = {
       data,
       prevHash,
       source,
+      nonce,
     );
 
     const evt = {
@@ -171,25 +185,12 @@ const Store = {
       type,
       ts,
       source,
+      nonce,
       data,
       synced: true,
     };
 
     this.eventsArray.push([evt]);
-
-    // If it's a member update, also update the fast lookup map
-    if (type === "ADD_MEMBER" || type === "REMOVE_MEMBER") {
-      const members = this.groupMap.get("members") || [];
-      if (type === "ADD_MEMBER" && !members.includes(data.name)) {
-        this.groupMap.set("members", [...members, data.name]);
-      }
-      if (type === "REMOVE_MEMBER") {
-        this.groupMap.set(
-          "members",
-          members.filter((m) => m !== data.name),
-        );
-      }
-    }
 
     return evt;
   },

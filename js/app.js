@@ -8,6 +8,8 @@ const App = {
   lastExpenseCurrency: null,
   lastExpensePayer: null,
   _retryTimerId: null,
+  _openedGroupId: null,
+  _syncOnlinePromise: null,
   
   async init() {
     this.registerServiceWorker();
@@ -33,6 +35,7 @@ const App = {
       console.log("[App] Device back online!");
       this._updateOfflinePill();
       this.syncOnline();
+      if (this.currentGroupId) this.syncGroupFromCloud(this.currentGroupId);
     });
     window.addEventListener('offline', () => {
       console.log("[App] Device went offline.");
@@ -48,13 +51,13 @@ const App = {
   },
 
   _startRetryLoop() {
-    this._stopRetryLoop();
+    if (this._retryTimerId) return;
     this._retryTimerId = setInterval(() => {
-      const group = this.currentGroupId ? State.getGroup(this.currentGroupId) : null;
-      if (group && group.pendingDeltas && group.pendingDeltas.length > 0 && navigator.onLine) {
-        console.log(`[App] Retry loop: ${group.pendingDeltas.length} pending, retrying...`);
+      const hasPending = Object.values(State.data.groups).some(group => group.pendingDeltas && group.pendingDeltas.length > 0);
+      if (hasPending && navigator.onLine) {
+        console.log('[App] Retry loop: retrying pending events...');
         this.syncOnline();
-      } else if (!group || !group.pendingDeltas || group.pendingDeltas.length === 0) {
+      } else if (!hasPending) {
         this._stopRetryLoop();
       }
     }, 20000);
@@ -68,6 +71,16 @@ const App = {
   },
 
   async syncOnline() {
+    if (this._syncOnlinePromise) return this._syncOnlinePromise;
+    this._syncOnlinePromise = this._syncOnline();
+    try {
+      return await this._syncOnlinePromise;
+    } finally {
+      this._syncOnlinePromise = null;
+    }
+  },
+
+  async _syncOnline() {
     await Currency.fetchRates();
     let updatedPending = false;
 
@@ -105,7 +118,8 @@ const App = {
         }
         
         // If ntfy rate limited us, but jsonbin successfully saved the full snapshot, we can clear pending deltas
-        const binSynced = await JSONBin.sync(group);
+        await this.syncGroupFromCloud(group.id);
+        const binSynced = await JSONBin.sync(State.getGroup(group.id));
         if (binSynced && State.getGroup(group.id).pendingDeltas.length > 0) {
           State.clearAllPendingDeltas(group.id);
           updatedPending = true;
@@ -117,6 +131,12 @@ const App = {
       State.save();
     }
 
+    if (Object.values(State.data.groups).some(group => group.pendingDeltas && group.pendingDeltas.length > 0)) {
+      this._startRetryLoop();
+    } else {
+      this._stopRetryLoop();
+    }
+
     this._updateOfflinePill();
     if (this.currentGroupId) {
       this.render();
@@ -125,13 +145,13 @@ const App = {
 
   async publishAndSync(groupId, evt) {
     if (!groupId || !evt) return;
-    const group = State.getGroup(groupId);
-    
     // Attempt publish to real-time pubsub stream
     const pubOk = await EventSourcing.publish(groupId, evt);
     
-    // Attempt sync to cloud storage
-    const binOk = await JSONBin.sync(group);
+    // Merge remote events before writing a full snapshot. A stale device must
+    // not replace another device's edits when it reconnects.
+    await this.syncGroupFromCloud(groupId);
+    const binOk = await JSONBin.sync(State.getGroup(groupId));
 
     // If successfully delivered to cloud, mark event as synced immediately
     if (pubOk || binOk) {
@@ -240,28 +260,6 @@ const App = {
                 </main>`;
             }
           }
-        } else {
-          // We found events but couldn't reconstruct the group (missing INIT/snapshot)
-          if (this.currentGroupId === groupId) {
-            const appEl = document.getElementById('app');
-            if (appEl) {
-              appEl.innerHTML = `
-                <header>
-                  <div style="display:flex; align-items:center; gap:12px;">
-                    <button onclick="App.goHome()" class="btn-icon">←</button>
-                    <h1>Group Error</h1>
-                  </div>
-                </header>
-                <main>
-                  <div class="empty-state" style="padding: 40px 20px;">
-                    <div style="font-size: 32px; margin-bottom: 12px;">⚠️</div>
-                    <div style="font-size: 15px; color: var(--text); margin-bottom: 6px;">Corrupted Cloud Ledger</div>
-                    <div style="font-size: 13px; margin-bottom: 20px;">We found cloud data for this group, but the initial creation event is missing. This usually happens if the group was created by an older version of the app that failed to sync correctly.</div>
-                    <button onclick="event.preventDefault(); App.importCSV(event);" class="btn-secondary">📥 Recover from CSV</button>
-                  </div>
-                </main>`;
-            }
-          }
         }
       } else {
         // No cloud data found — update UI if group still doesn't exist locally
@@ -297,7 +295,12 @@ const App = {
   handleLiveEvent(evt) {
     if (!this.currentGroupId || !evt) return;
     const group = State.getGroup(this.currentGroupId);
-    if (!group) return;
+    if (!group) {
+      if (evt.type === 'INIT' || evt.type === 'SNAPSHOT_SYNC') {
+        this.syncGroupFromCloud(this.currentGroupId);
+      }
+      return;
+    }
 
     // Handle ping sync (used when snapshot was too large for ntfy)
     if (evt.type === 'PING_SYNC') {
@@ -880,8 +883,13 @@ const App = {
       this.currentGroupId = hash.split('=')[1];
       let group = State.getGroup(this.currentGroupId);
 
-      // Always trigger asynchronous cloud history sync
-      this.syncGroupFromCloud(this.currentGroupId);
+      if (this._openedGroupId !== this.currentGroupId) {
+        this._openedGroupId = this.currentGroupId;
+        this.syncGroupFromCloud(this.currentGroupId);
+      }
+
+      // Keep listening even while a newly shared group is still loading.
+      EventSourcing.subscribe(this.currentGroupId, (evt) => this.handleLiveEvent(evt));
 
       if (!group) {
         // Friendly offline message for new group links
@@ -921,13 +929,6 @@ const App = {
         this._stopRetryLoop();
       }
 
-      // Proactively re-upload snapshot so other browsers can find this group
-      // (ntfy.sh messages expire after ~12h, so we refresh on every page load)
-      JSONBin.sync(group);
-
-      // Subscribe to real-time live SSE stream for this group
-      EventSourcing.subscribe(this.currentGroupId, (evt) => this.handleLiveEvent(evt));
-
       const offlinePillHtml = !navigator.onLine
         ? '<span id="offlinePill" class="offline-pill">📡 Offline</span>'
         : '<span id="offlinePill" class="offline-pill" style="display:none">📡 Offline</span>';
@@ -945,13 +946,19 @@ const App = {
           </div>
         </header>
         <main>
-          ${Components.renderGroupDashboard(group)}
+          ${UIComponents.renderGroupDashboard(group)}
         </main>
         <button class="fab btn-primary" onclick="App.showAddExpense()">💰</button>
       `;
     } else {
       EventSourcing.unsubscribe();
-      this._stopRetryLoop();
+      if (Object.values(State.data.groups).some(group => group.pendingDeltas && group.pendingDeltas.length > 0)) {
+        this._startRetryLoop();
+        if (navigator.onLine) this.syncOnline();
+      } else {
+        this._stopRetryLoop();
+      }
+      this._openedGroupId = null;
       this.currentGroupId = null;
       appEl.innerHTML = `
         <header>
@@ -959,7 +966,7 @@ const App = {
           <button onclick="App.showNewGroup()" class="btn-primary">+ New Group</button>
         </header>
         <main>
-          ${Components.renderGroupsList(State.data.groups)}
+          ${UIComponents.renderGroupsList(State.data.groups)}
         </main>
       `;
     }

@@ -1,7 +1,7 @@
-import Store from "./store.js?v=3.0.34";
+import Store from "./store.js?v=3.0.35";
 import Currency from "./currency.js?v=3.0.34";
 import CurrencyPicker from "./currencyPicker.js?v=3.0.34";
-import Components from "./components.js?v=3.0.34";
+import UIComponents from "./components.js?v=3.0.35";
 import QRCode from "./qrcode.js?v=3.0.34";
 import Export from "./export.js?v=3.0.34";
 import Settlement from "./settlement.js?v=3.0.34";
@@ -299,7 +299,8 @@ const App = {
         this._syncInterval = null;
       }
 
-      appEl.innerHTML = Components.renderGroupDashboard(group);
+      appEl.innerHTML = UIComponents.renderGroupDashboard(group);
+      Store.updateSyncPill();
       this.saveRecentGroup(group);
 
       // Update header
@@ -326,7 +327,7 @@ const App = {
       try {
         recentGroups = JSON.parse(localStorage.getItem("split_recent_groups") || "[]");
       } catch (e) {}
-      appEl.innerHTML = Components.renderHome({ recentGroups });
+      appEl.innerHTML = UIComponents.renderHome({ recentGroups });
       if (typeof CurrencyPicker !== "undefined") {
         CurrencyPicker.init("groupCurrency");
       }
@@ -593,7 +594,6 @@ const App = {
 window.App = App;
 window.Export = Export;
 window.CurrencyPicker = CurrencyPicker;
-window.Components = Components;
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => App.init());

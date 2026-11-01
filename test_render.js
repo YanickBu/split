@@ -1,7 +1,7 @@
 global.localStorage = { getItem: () => null, setItem: () => {} };
 const fs = require('fs');
 
-// We need State and Components and Settlement
+// We need State, UIComponents and Settlement
 eval(fs.readFileSync('js/state.js', 'utf8'));
 eval(fs.readFileSync('js/settlement.js', 'utf8'));
 eval(fs.readFileSync('js/components.js', 'utf8'));
@@ -102,7 +102,7 @@ const JSONBin = {
       State.rehydrate(groupId);
       
       try {
-        const html = Components.renderGroupDashboard(group);
+        const html = UIComponents.renderGroupDashboard(group);
         console.log("Render successful! Length:", html.length);
       } catch (err) {
         console.error("Render crashed:", err);

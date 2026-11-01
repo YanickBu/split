@@ -1,5 +1,5 @@
-import Store from "./store.js?v=3.0.29";
-import Components from "./components.js?v=3.0.29";
+import Store from "./store.js?v=3.0.35";
+import UIComponents from "./components.js?v=3.0.35";
 import Currency from "./currency.js?v=3.0.29";
 
 const AnalyticsApp = {
@@ -51,7 +51,7 @@ const AnalyticsApp = {
     }
 
     document.getElementById("groupTitleDisplay").innerText = `${group.name} Analytics`;
-    document.getElementById("syncPill").style.display = "none";
+    Store.updateSyncPill();
     document.getElementById("loadingContent").style.display = "none";
     document.getElementById("analyticsContent").style.display = "block";
 
@@ -125,7 +125,7 @@ const AnalyticsApp = {
   renderCategoryChart(expenses, groupCurrency) {
     const byCat = {};
     expenses.forEach(e => {
-      const emoji = Components.getCategoryEmoji(e.data.title);
+      const emoji = UIComponents.getCategoryEmoji(e.data.title);
       if (!byCat[emoji]) byCat[emoji] = 0;
       byCat[emoji] += this._getAmount(e);
     });

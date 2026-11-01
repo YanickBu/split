@@ -1,7 +1,7 @@
 import Settlement from "./settlement.js";
 import Currency from "./currency.js";
 
-const Components = {
+const UIComponents = {
   renderHome({ recentGroups = [] }) {
     return `
       <header>
@@ -283,4 +283,4 @@ const Components = {
   },
 };
 
-export default Components;
+export default UIComponents;

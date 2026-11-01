@@ -1,4 +1,4 @@
-const CACHE_NAME = 'split-v20';
+const CACHE_NAME = 'split-v21';
 const ASSETS = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const ASSETS = [
   './js/qrcode.js',
   './js/components.js',
   './js/app.js',
+  './favicon.svg',
   './manifest.json'
 ];
 

@@ -344,7 +344,7 @@ const App = {
     if (!existing && evt.type) {
       evt.synced = true;
       group.events.push(evt);
-      State.processEvent(group, evt);
+      State.rehydrate(this.currentGroupId);
       State.save();
       this.render();
     }

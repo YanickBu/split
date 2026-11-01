@@ -1,4 +1,4 @@
-import Store from "./store.js?v=3.0.35";
+import Store from "./store.js?v=3.0.36";
 import Currency from "./currency.js?v=3.0.34";
 import CurrencyPicker from "./currencyPicker.js?v=3.0.34";
 import UIComponents from "./components.js?v=3.0.35";
@@ -127,6 +127,7 @@ const App = {
         const expenseDate = document.getElementById("expenseDate").value;
         const editExpenseId = document.getElementById("editExpenseId") ? document.getElementById("editExpenseId").value : "";
 
+        const groupId = this.currentGroupId;
         const group = Store.getGroup();
         if (!group) return;
 
@@ -168,6 +169,10 @@ const App = {
           rateSnap = Currency.rates;
         }
 
+        // Currency lookup is asynchronous. Do not write an expense into a
+        // different room if navigation happened while it was in flight.
+        if (this.currentGroupId !== groupId || Store.getGroup()?.id !== groupId) return;
+
         const expensePayload = {
           title,
           originalAmount: amount,
@@ -181,12 +186,12 @@ const App = {
         };
 
         if (editExpenseId) {
-          Store.appendEvent(this.currentGroupId, "EDIT_EXPENSE", {
+          Store.appendEvent(groupId, "EDIT_EXPENSE", {
             targetHash: editExpenseId,
             changes: expensePayload
           });
         } else {
-          Store.appendEvent(this.currentGroupId, "ADD_EXPENSE", expensePayload);
+          Store.appendEvent(groupId, "ADD_EXPENSE", expensePayload);
         }
 
         document.getElementById("addExpenseModal").close();

@@ -1,4 +1,4 @@
-import Store from "./store.js?v=3.0.35";
+import Store from "./store.js?v=3.0.36";
 import UIComponents from "./components.js?v=3.0.35";
 import Currency from "./currency.js?v=3.0.29";
 

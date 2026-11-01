@@ -173,7 +173,13 @@ const State = {
     if (!group.pendingDeltas) group.pendingDeltas = [];
     group.members = [];
     
-    group.events.sort((a, b) => a.ts - b.ts);
+    group.events.sort((a, b) => {
+      const timeOrder = (a.ts || 0) - (b.ts || 0);
+      if (timeOrder) return timeOrder;
+      const aId = String(a.hash || a.id || '');
+      const bId = String(b.hash || b.id || '');
+      return aId < bId ? -1 : aId > bId ? 1 : 0;
+    });
 
     const seenHashes = new Set();
     const cleanEvents = [];

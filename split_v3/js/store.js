@@ -2,7 +2,7 @@ import * as Y from "https://esm.sh/yjs@13.6.14";
 import { IndexeddbPersistence } from "https://esm.sh/y-indexeddb@9.0.12?deps=yjs@13.6.14";
 import { createClient } from "https://esm.sh/@liveblocks/client@2.6.0";
 import { LiveblocksYjsProvider } from "https://esm.sh/@liveblocks/yjs@2.6.0?deps=yjs@13.6.14";
-import { deriveMembers } from "./members.js";
+import { deriveMembers } from "./members.js?v=3.0.36";
 
 const Store = {
   ydoc: null,

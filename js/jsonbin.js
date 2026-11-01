@@ -104,8 +104,18 @@ const JSONBin = {
     if (!groupId) return [];
     const cloudId = `${this.PREFIX}${groupId}`;
     
-    let events = [];
+    const eventsById = new Map();
     let snapshotGroup = null;
+    let snapshotTimestamp = 0;
+    let hasPersistentSnapshot = false;
+    const addEvents = (items) => {
+      if (!Array.isArray(items)) return;
+      items.forEach(evt => {
+        if (!evt || !evt.type) return;
+        const id = evt.hash || evt.id;
+        if (id && !eventsById.has(id)) eventsById.set(id, evt);
+      });
+    };
 
     // 1. Try jsonbin.io FIRST (persistent, reliable)
     if (this.apiKey) {
@@ -119,6 +129,8 @@ const JSONBin = {
             const data = await res.json();
             if (data && data.record && data.record.events) {
               snapshotGroup = data.record;
+              hasPersistentSnapshot = true;
+              addEvents(snapshotGroup.events);
               console.log('[JSONBin] Loaded group from jsonbin.io, events:', snapshotGroup.events.length);
             }
           }
@@ -141,6 +153,8 @@ const JSONBin = {
                   const binData = await binRes.json();
                   if (binData && binData.record && binData.record.events) {
                     snapshotGroup = binData.record;
+                    hasPersistentSnapshot = true;
+                    addEvents(snapshotGroup.events);
                     console.log('[JSONBin] Found and loaded group from jsonbin.io search, events:', snapshotGroup.events.length);
                   }
                 }
@@ -167,24 +181,19 @@ const JSONBin = {
             if (item && item.message) {
               const parsedEvt = JSON.parse(item.message);
 
-              // Handle SNAPSHOT_SYNC from ntfy — use if newer than jsonbin snapshot
+              // Keep every snapshot's events: concurrent devices can publish
+              // different event sets of the same size.
               if (parsedEvt && parsedEvt.type === 'SNAPSHOT_SYNC' && parsedEvt.groupState) {
-                if (!snapshotGroup || (parsedEvt.timestamp > (snapshotGroup._snapshotTs || 0))) {
-                  // Only replace if ntfy snapshot has more events
-                  const ntfyEvtCount = parsedEvt.groupState.events ? parsedEvt.groupState.events.length : 0;
-                  const curEvtCount = snapshotGroup ? (snapshotGroup.events ? snapshotGroup.events.length : 0) : 0;
-                  if (ntfyEvtCount >= curEvtCount) {
-                    snapshotGroup = parsedEvt.groupState;
-                    snapshotGroup._snapshotTs = parsedEvt.timestamp;
-                  }
+                addEvents(parsedEvt.groupState.events);
+                if (!hasPersistentSnapshot && (!snapshotGroup || (parsedEvt.timestamp || 0) > snapshotTimestamp)) {
+                  snapshotGroup = parsedEvt.groupState;
+                  snapshotTimestamp = parsedEvt.timestamp || 0;
                 }
                 return;
               }
 
               // Individual event messages
-              if (parsedEvt && (parsedEvt.type || parsedEvt.hash)) {
-                events.push(parsedEvt);
-              }
+              addEvents([parsedEvt]);
             }
           } catch (e) {}
         });
@@ -193,20 +202,8 @@ const JSONBin = {
       console.warn(`[JSONBin] ntfy.sh fetch failed for ${cloudId}:`, err);
     }
 
-    // 3. Merge snapshot events with individual events
-    if (snapshotGroup && snapshotGroup.events && snapshotGroup.events.length > 0) {
-      const allEvents = [...snapshotGroup.events];
-      events.forEach(evt => {
-        const hashKey = evt.hash || evt.id;
-        const exists = allEvents.some(e => (e.hash === hashKey || e.id === hashKey));
-        if (!exists) {
-          allEvents.push(evt);
-        }
-      });
-      allEvents._snapshotGroup = snapshotGroup;
-      return allEvents;
-    }
-
+    const events = [...eventsById.values()];
+    if (snapshotGroup) events._snapshotGroup = snapshotGroup;
     return events;
   }
 };

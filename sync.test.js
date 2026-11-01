@@ -58,3 +58,21 @@ test("simultaneous retry requests share one sync operation", async () => {
   finish();
   await Promise.all([first, second]);
 });
+
+test("equal timestamp ledger events replay in the same order on every device", () => {
+  const context = {
+    localStorage: { getItem: () => null },
+    console,
+  };
+  vm.runInNewContext(readFileSync("js/state.js", "utf8") + "\nglobalThis.testState = State;", context);
+  const state = context.testState;
+  const init = { type: "INIT", ts: 1, hash: "init", data: { creator: "Alice" } };
+  const add = { type: "ADD_MEMBER", ts: 2, hash: "a", data: { name: "Bob" } };
+  const remove = { type: "REMOVE_MEMBER", ts: 2, hash: "b", data: { name: "Bob" } };
+
+  for (const events of [[init, add, remove], [remove, init, add]]) {
+    state.data.groups.trip = { events: [...events], members: [] };
+    state.rehydrate("trip");
+    assert.deepEqual(Array.from(state.data.groups.trip.members), ["Alice"]);
+  }
+});

@@ -5,7 +5,7 @@ import {openLegacy,openRootLegacy,closeLegacy,downloadLegacy,memberId} from './m
 
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const val=(form,key)=>form.elements.namedItem(key).value;
-const store=new GroupStore();let groupId='',view=null,installPrompt=null,legacy=null;
+const store=new GroupStore();let groupId=null,view=null,installPrompt=null,legacy=null;
 const url=id=>new URL(`./index.html#group=${encodeURIComponent(id)}`,location.href).href;
 const names=()=>Object.fromEntries((view?.members||[]).map(m=>[m.id,m.name]));
 const money=(n,c,exp=exponent(c))=>`${formatMoney(n,exp)} ${c}`;

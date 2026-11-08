@@ -1,67 +1,13 @@
-# ⚡ Split v2
+# Split v4
 
-[![Automated Test Suite](https://github.com/YanickBu/split/actions/workflows/test.yml/badge.svg)](https://github.com/YanickBu/split/actions/workflows/test.yml)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-4caf50)](https://YanickBu.github.io/split/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+Open `index.html` through an HTTPS static host, or use `python3 -m http.server` for local development at `http://localhost:8000/`. The browser must allow IndexedDB. The checked-in `js/vendor.js` contains Yjs, y-indexeddb and the Liveblocks client, so an offline reload does not need a package CDN or a build step. `npm run build:vendor` rebuilds it after dependency updates.
 
-A modern, offline-first expense sharing & debt minimization web application with real-time multi-currency support, cryptographic event-ledger immutability, and instant cloud sync.
+The group link is the capability. Anyone with it can read and change the group. Keep it among trusted friends. The bundled Liveblocks key is a public pilot key, so this is for invited use; monitor room quota and add a capability-check endpoint before a public launch.
 
-🌐 **Live App**: [https://YanickBu.github.io/split/](https://YanickBu.github.io/split/)
+The v4 archive is a JSON object with `format`, `schemaVersion`, `groupId`, `events`, and optional `legacyArchive`. Every event is a plain JSON object with six top-level fields: `schemaVersion`, `groupId`, `id`, `clock`, `type`, `data`. Money amounts are integer decimal strings and currency exponents are recorded in the group and expense payloads. Keep exports in a safe place: browser storage can be evicted.
 
----
+Foreign expenses remain excluded from balances until someone enters a group amount. Automatic FX conversion is intentionally absent until its exact rounding policy is decided. The app never guesses a rate. The v3 migration screen requires a fully synced old room, downloads the binary archive, shows the legacy balance proposal and split drift, and requires a reviewed zero-sum opening vector. It writes a marker to the old room unless the old link may have leaked. Old expenses remain read-only in the archived Yjs document.
 
-## ✨ Features
+Links from the older root app (`#group=grp_…`) open a migration screen. On a browser that still has that group's `split_groups` local storage, v4 can archive the raw JSON and propose a reviewed opening vector. The old root app used JSONBin/ntfy rather than v3's Yjs room, so its link alone cannot recover data on a new device. The migration does not alter or delete the old local data. Keep the archive download and share only the new v4 link after review.
 
-- 🌍 **All World Currencies Supported**: Supports **~160+ ISO 4217 currencies** (USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR, BRL, MXN, KRW, SEK, NOK, DKK, AED, SAR, PLN, PHP, IDR, THB, etc.) with live exchange rates.
-- 🔍 **Interactive Searchable Currency Picker**: Live search across all global currencies by ISO code, full currency name, or symbol (`$`, `€`, `£`, `¥`, `₹`, `₺`, `₱`, `₫`, etc.).
-- 🧠 **Smart Expense Currency Memory**: Remembers your last selected expense currency for effortless consecutive entries.
-- 📴 **Offline-First & Pending Rate Resolution**: Works 100% offline. Expenses added offline without exchange rates are saved with a `⏳ Rate pending` badge and automatically resolved with accurate live rates when reconnected (no inaccurate 1:1 fallbacks!).
-- 🔐 **Immutable Cryptographic Ledger**: Every transaction event receives a deterministic 12-character cryptographic hash (`0x...`) chained with `prevHash`. Expenses can only be voided via append-only `STORNO_EXPENSE` events.
-- ⚡ **Live Real-Time Sync**: Instant multi-device updates using Server-Sent Events (SSE) via `ntfy.sh` and cloud storage sync.
-- 🤝 **Optimal Debt Minimization**: Greedy settlement algorithm that calculates net balances and minimizes the total number of transactions required to square up.
-- 📤 **One-Touch Summary Sharing**: Export and share formatted group summaries via Web Share API or clipboard.
-
----
-
-## 🛠️ Technology Stack
-
-- **Frontend**: HTML5, Vanilla CSS3 (Custom Dark Mode aesthetic), ES6+ JavaScript.
-- **APIs & Web Standards**: Open Exchange Rates API (`open.er-api.com`), Server-Sent Events (SSE), Web Storage (`localStorage`), Web Share API.
-- **CI / CD**: GitHub Actions automated mathematical & cryptographic test suite.
-
----
-
-## 🧪 Running Automated Tests
-
-Run the mathematical & immutability test suite locally:
-
-```bash
-python test_suite.py
-```
-
-### Test Coverage Includes:
-1. **Single Currency Equal Splits**: Exact balance calculations.
-2. **Multi-Border Currency Conversions**: Cross-currency settlement accuracy.
-3. **Storno Immutability**: Append-only log verification.
-4. **Cryptographic Chain Validation**: Tamper detection on past events.
-5. **Penny Remainder Balancing**: Guarantees net-zero balance sums across members.
-
----
-
-## 🚀 GitHub Pages Deployment
-
-1. Push code to your GitHub repository:
-   ```bash
-   git add .
-   git commit -m "Deploy Split v2"
-   git push -u origin main
-   ```
-2. Go to **Settings** ➔ **Pages** in your GitHub repository.
-3. Set **Source** to `Deploy from a branch` and select **`main`** branch `/ (root)`.
-4. Your application will be live at `https://YanickBu.github.io/split/`.
-
----
-
-## 📄 License
-
-MIT License © 2026 YanickBu
+Run `npm test` for ledger, migration, and local archive tests. Before claiming the 30-day offline target, run the full installed/tab matrix on Android Chrome 120+, iOS Safari 17.4+, and desktop Chromium, including two reconnect orders and provider deletion/recovery. The elapsed 30-calendar-day field test and Liveblocks quota/cost pilot cannot be completed by local automated tests.

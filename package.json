@@ -1,10 +1,13 @@
 {
   "type": "module",
   "scripts": {
-    "lint": "echo 'No linting configured' && exit 0",
-    "format:check": "echo 'No formatting configured' && exit 0"
+    "test": "node --test tests/*.test.js",
+    "build:vendor": "esbuild js/vendor-entry.js --bundle --format=esm --target=es2022 --minify --outfile=js/vendor.js"
   },
   "dependencies": {
+    "@liveblocks/client": "^2.6.0",
+    "@liveblocks/yjs": "^2.6.0",
+    "esbuild": "^0.25.12",
     "fake-indexeddb": "^5.0.2",
     "y-indexeddb": "^9.0.12",
     "yjs": "^13.6.14"

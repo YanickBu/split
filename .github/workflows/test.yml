@@ -8,17 +8,19 @@ on:
 
 jobs:
   test:
-    name: Run Mathematical & Immutable Ledger Tests
+    name: Run v4 tests
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.11'
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
 
       - name: Execute Test Suite
-        run: python test_suite.py
+        run: npm test
